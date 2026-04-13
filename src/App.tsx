@@ -1,14 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as f3 from 'family-chart';
-import 'family-chart/styles/family-chart.css';
+import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
-import { fetchFamilyChart, FAMILY_CHART_URL } from './familyChartApi';
+import { FamilyChartEditor } from './components/FamilyChartEditor';
+import { fetchFamilyChart, FAMILY_CHART_URL, type FamilyChartData } from './familyChartApi';
 
 function App() {
-  const chartRef = useRef<HTMLDivElement | null>(null);
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchFamilyChart>> | null>(null);
+  const [treeData, setTreeData] = useState<FamilyChartData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Bump after a successful load so the editor remounts with server data. */
+  const [chartGeneration, setChartGeneration] = useState(0);
+  const [eventLog, setEventLog] = useState<string[]>([]);
+
+  const appendLog = useCallback((line: string) => {
+    setEventLog((prev) => [`${new Date().toLocaleTimeString()} — ${line}`, ...prev].slice(0, 40));
+  }, []);
+
+  const handlePersistedData = useCallback((next: FamilyChartData) => {
+    setTreeData(next);
+    setChartGeneration((g) => g + 1);
+    appendLog(`saveSuccess (${next.length} people synced from server)`);
+  }, [appendLog]);
 
   useEffect(() => {
     let cancelled = false;
@@ -17,7 +28,8 @@ function App() {
     fetchFamilyChart()
       .then((payload) => {
         if (!cancelled) {
-          setData(payload);
+          setTreeData(payload);
+          setChartGeneration((g) => g + 1);
         }
       })
       .catch((e: unknown) => {
@@ -35,39 +47,54 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!data || !chartRef.current) {
-      return;
-    }
-    const el = chartRef.current;
-    el.innerHTML = '';
-    const chart = f3.createChart(el, data);
-    chart.setCardHtml().setCardDisplay([['first name', 'last name'], ['birthday']]);
-    chart.updateTree({ initial: true });
-    return () => {
-      el.innerHTML = '';
-    };
-  }, [data]);
-
   return (
     <div className="App">
-      <h1>Family Chart</h1>
-      <p className="chart-source">
-        Data: <code>{FAMILY_CHART_URL}</code>
-      </p>
+      <header className="app-header">
+        <h1>Family Chart (editable)</h1>
+        <p className="chart-source">
+          Data: <code>{FAMILY_CHART_URL}</code>
+        </p>
+        <p className="chart-hint">
+          Click a person to edit. Submitting the person form auto-saves to Rails with{' '}
+          <code>nodes</code> and <code>removed_ids</code>.
+        </p>
+      </header>
+
       {loading && <p className="chart-status">Loading…</p>}
       {error && (
         <p className="chart-status chart-error" role="alert">
           {error}
         </p>
       )}
-      <div
-        className="f3 chart-container"
-        id="FamilyChart"
-        ref={chartRef}
-        data-testid="family-chart-root"
-        aria-busy={loading}
-      />
+
+      {treeData && (
+        <FamilyChartEditor
+          data={treeData}
+          remountKey={chartGeneration}
+          onDataChange={setTreeData}
+          onPersistedData={handlePersistedData}
+          onUpdate={(data) => appendLog(`onUpdate (${data.length} people)`)}
+          onAdd={(data, ids) =>
+            appendLog(`onAdd [${ids.join(', ')}] → ${data.length} people total`)
+          }
+          onRemove={(data, ids) =>
+            appendLog(`onRemove [${ids.join(', ')}] → ${data.length} people total`)
+          }
+        />
+      )}
+
+      {eventLog.length > 0 && (
+        <section className="event-log" aria-label="Edit event log">
+          <h2>Recent interactions</h2>
+          <ol>
+            {eventLog.map((line, i) => (
+              <li key={`${i}-${line}`}>
+                <code>{line}</code>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
   );
 }

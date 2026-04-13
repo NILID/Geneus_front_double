@@ -1,12 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 
-jest.mock('family-chart', () => ({
-  createChart: jest.fn(() => ({
-    setCardHtml: jest.fn().mockReturnThis(),
-    setCardDisplay: jest.fn().mockReturnThis(),
-    updateTree: jest.fn().mockReturnThis(),
-  })),
+jest.mock('./components/FamilyChartEditor', () => ({
+  FamilyChartEditor: () => <div data-testid="family-chart-root" />,
 }));
 
 import App from './App';
@@ -53,9 +49,10 @@ beforeEach(() => {
   }) as jest.Mock;
 });
 
-test('renders family chart container', async () => {
+test('loads chart and renders editor placeholder', async () => {
   render(<App />);
-  const chartElement = screen.getByTestId('family-chart-root');
-  expect(chartElement).toBeInTheDocument();
-  await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+  await waitFor(() => {
+    expect(screen.getByTestId('family-chart-root')).toBeInTheDocument();
+  });
+  expect(global.fetch).toHaveBeenCalled();
 });

@@ -2,13 +2,29 @@
   min-height: 100vh;
   background-color: rgb(33, 33, 33);
   color: #fff;
-  text-align: center;
   padding: 1rem;
+  text-align: left;
+  /* max-width: 1200px; */
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.app-header {
+  text-align: center;
+  margin-bottom: 1rem;
 }
 
 .App h1 {
   margin: 0 0 1rem;
   font-size: 1.5rem;
+}
+
+.chart-hint {
+  margin: 0.5rem auto 0;
+  max-width: 42rem;
+  font-size: 0.85rem;
+  color: #aaa;
+  line-height: 1.4;
 }
 
 .chart-source {
@@ -30,8 +46,75 @@
   color: #f88;
 }
 
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.75rem;
+}
+
+.chart-save-button {
+  border: 0;
+  border-radius: 6px;
+  background: #4b8dff;
+  color: #fff;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chart-save-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.chart-save-meta {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.chart-save-success {
+  font-size: 0.85rem;
+  color: #9ae6b4;
+}
+
+.chart-save-error {
+  font-size: 0.85rem;
+  color: #f88;
+}
+
 .chart-container {
   width: 100%;
   height: 900px;
   margin: 0 auto;
+}
+
+.event-log {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+}
+
+.event-log h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.event-log ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.event-log li {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: #ddd;
+}
+
+.event-log code {
+  word-break: break-word;
+  white-space: pre-wrap;
 }

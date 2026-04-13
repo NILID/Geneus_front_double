@@ -17,9 +17,15 @@ export interface FamilyChartPerson {
 
 export type FamilyChartData = FamilyChartPerson[];
 
+export interface UpdateTreePayload {
+  nodes: FamilyChartData;
+  removed_ids: string[];
+}
+
 /** Dev server proxies this to http://127.0.0.1:3001 (see package.json). Override with REACT_APP_FAMILY_CHART_URL. */
 export const FAMILY_CHART_URL =
   process.env.REACT_APP_FAMILY_CHART_URL ?? '/people/family_chart';
+export const UPDATE_TREE_URL = process.env.REACT_APP_UPDATE_TREE_URL ?? '/people/update_tree';
 
 export function normalizeFamilyChartPayload(json: unknown): FamilyChartData {
   if (Array.isArray(json)) {
@@ -48,5 +54,32 @@ export async function fetchFamilyChart(): Promise<FamilyChartData> {
     throw new Error(`Family chart request failed: ${res.status} ${res.statusText}`);
   }
   const json: unknown = await res.json();
+  return normalizeFamilyChartPayload(json);
+}
+
+function getCsrfToken(): string | null {
+  return document
+    .querySelector('meta[name="csrf-token"]')
+    ?.getAttribute('content')
+    ?.trim() ?? null;
+}
+
+export async function saveFamilyTree(payload: UpdateTreePayload): Promise<FamilyChartData> {
+  const csrfToken = getCsrfToken();
+  const res = await fetch(UPDATE_TREE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(`Update tree request failed: ${res.status} ${res.statusText}`);
+  }
+  const json: unknown = await res.json();
+  if (json && typeof json === 'object' && Array.isArray((json as Record<string, unknown>).nodes)) {
+    return (json as { nodes: FamilyChartData }).nodes;
+  }
   return normalizeFamilyChartPayload(json);
 }
