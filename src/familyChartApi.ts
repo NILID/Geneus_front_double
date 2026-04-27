@@ -1,3 +1,5 @@
+import { getStoredToken } from './auth/storage';
+
 /**
  * Shape expected by family-chart (see library data format).
  * Defined locally because `family-chart`'s `Data` / `Datum` re-exports resolve as namespaces under this TS setup.
@@ -48,8 +50,18 @@ export function normalizeFamilyChartPayload(json: unknown): FamilyChartData {
   );
 }
 
+function authorizedInit(init: RequestInit = {}): RequestInit {
+  const headers = new Headers(init.headers ?? undefined);
+  headers.set('Accept', 'application/json');
+  const token = getStoredToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return { ...init, headers };
+}
+
 export async function fetchFamilyChart(): Promise<FamilyChartData> {
-  const res = await fetch(FAMILY_CHART_URL);
+  const res = await fetch(FAMILY_CHART_URL, authorizedInit());
   if (!res.ok) {
     throw new Error(`Family chart request failed: ${res.status} ${res.statusText}`);
   }
@@ -66,12 +78,19 @@ function getCsrfToken(): string | null {
 
 export async function saveFamilyTree(payload: UpdateTreePayload): Promise<FamilyChartData> {
   const csrfToken = getCsrfToken();
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/json');
+  headers.set('Accept', 'application/json');
+  const token = getStoredToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (csrfToken) {
+    headers.set('X-CSRF-Token', csrfToken);
+  }
   const res = await fetch(UPDATE_TREE_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    },
+    headers,
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
