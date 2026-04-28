@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import Link from '@mui/material/Link';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth/AuthContext';
 
 export function RegisterPage() {
@@ -27,53 +36,59 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="auth-page">
-      <h1>Create account</h1>
-      <form className="auth-form" onSubmit={onSubmit}>
-        <label className="auth-field">
-          <span>Email</span>
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(ev) => setEmail(ev.target.value)}
-            required
-          />
-        </label>
-        <label className="auth-field">
-          <span>Password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(ev) => setPassword(ev.target.value)}
-            required
-            minLength={6}
-          />
-        </label>
-        <label className="auth-field">
-          <span>Confirm password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={passwordConfirmation}
-            onChange={(ev) => setPasswordConfirmation(ev.target.value)}
-            required
-            minLength={6}
-          />
-        </label>
-        {error && (
-          <p className="auth-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button type="submit" className="auth-submit" disabled={busy}>
-          {busy ? 'Creating…' : 'Register'}
-        </button>
-      </form>
-      <p className="auth-links">
-        <Link to="/login">Already have an account?</Link>
-      </p>
-    </div>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
+        <Typography variant="h1" component="h1" gutterBottom align="center">
+          Create account
+        </Typography>
+        <Box component="form" onSubmit={onSubmit} noValidate>
+          <Stack spacing={2}>
+            <TextField
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(ev) => setEmail(ev.target.value)}
+              required
+              fullWidth
+            />
+            <TextField
+              label="Password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              required
+              fullWidth
+              slotProps={{ htmlInput: { minLength: 6 } }}
+              helperText="At least 6 characters"
+            />
+            <TextField
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              value={passwordConfirmation}
+              onChange={(ev) => setPasswordConfirmation(ev.target.value)}
+              required
+              fullWidth
+              slotProps={{ htmlInput: { minLength: 6 } }}
+            />
+            {error && (
+              <Alert severity="error" role="alert">
+                {error}
+              </Alert>
+            )}
+            <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
+              {busy ? 'Creating…' : 'Register'}
+            </Button>
+          </Stack>
+        </Box>
+        <Typography align="center" sx={{ mt: 3 }}>
+          <Link component={RouterLink} to="/login" variant="body2">
+            Already have an account?
+          </Link>
+        </Typography>
+      </Paper>
+    </Container>
   );
 }

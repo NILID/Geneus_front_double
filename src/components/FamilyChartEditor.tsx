@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as f3 from 'family-chart';
 import 'family-chart/styles/family-chart.css';
+import Box from '@mui/material/Box';
 import { saveFamilyTree, type FamilyChartData } from '../familyChartApi';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
 
@@ -183,12 +184,18 @@ export function FamilyChartEditor({
   }
 
   return (
-    <div
+    <Box
       className="f3 chart-container"
       id="FamilyChart"
       ref={containerRef}
       data-testid="family-chart-root"
       aria-busy={isSaving}
+      sx={{
+        width: '100%',
+        height: { xs: 560, sm: 720, md: 900 },
+        maxWidth: '100%',
+        mx: 'auto',
+      }}
     />
   );
 }

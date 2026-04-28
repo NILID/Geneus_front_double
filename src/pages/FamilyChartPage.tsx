@@ -1,7 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Container from '@mui/material/Container';
+import Divider from '@mui/material/Divider';
+import Link from '@mui/material/Link';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth/AuthContext';
 import { FamilyChartEditor } from '../components/FamilyChartEditor';
+import { SessionLoading } from '../components/SessionLoading';
 import { fetchFamilyChart, FAMILY_CHART_URL, type FamilyChartData } from '../familyChartApi';
 
 export function FamilyChartPage() {
@@ -58,63 +71,119 @@ export function FamilyChartPage() {
   }, []);
 
   return (
-    <div className="App">
-      <header className="app-header">
-        <div className="app-user-bar">
-          <span className="app-user-email">{user?.email}</span>
-          <button type="button" className="auth-logout" onClick={() => void handleLogout()}>
-            Sign out
-          </button>
-        </div>
-        <h1>Family Chart (editable)</h1>
-        <p className="chart-source">
-          Data: <code>{FAMILY_CHART_URL}</code>
-        </p>
-        <p className="chart-hint">
-          Click a person to edit. Submitting the person form auto-saves to Rails with{' '}
-          <code>nodes</code> and <code>removed_ids</code>.{' '}
-          <Link to="/login" className="auth-inline-link">
-            Session
-          </Link>{' '}
-          is required for the API.
-        </p>
-      </header>
+    <Container maxWidth={false} sx={{ py: 2, px: { xs: 1, sm: 2 } }}>
+      <Stack spacing={2}>
+        <Paper elevation={2} sx={{ p: 2 }}>
+          <Stack
+            spacing={2}
+            sx={{
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 2,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {user?.email}
+            </Typography>
+            <Button variant="outlined" color="inherit" size="small" onClick={() => void handleLogout()}>
+              Sign out
+            </Button>
+          </Stack>
+          <Typography variant="h1" component="h1" align="center" gutterBottom>
+            Family Chart (editable)
+          </Typography>
+          <Typography variant="body2" color="text.secondary" align="center" gutterBottom>
+            Data: <Box component="code" sx={{ color: 'primary.light' }}>{FAMILY_CHART_URL}</Box>
+          </Typography>
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 560, mx: 'auto' }}>
+            Click a person to edit. Submitting the person form auto-saves to Rails with{' '}
+            <Box component="code" sx={{ color: 'text.primary' }}>nodes</Box> and{' '}
+            <Box component="code" sx={{ color: 'text.primary' }}>removed_ids</Box>.{' '}
+            <Link component={RouterLink} to="/login">
+              Session
+            </Link>{' '}
+            is required for the API.
+          </Typography>
 
-      {loading && <p className="chart-status">Loading…</p>}
-      {error && (
-        <p className="chart-status chart-error" role="alert">
-          {error}
-        </p>
-      )}
+          {treeData && treeData.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                component="div"
+                sx={{ mb: 1, textAlign: 'center' }}
+              >
+                Profiles
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+                {treeData.map((node) => {
+                  const nameField =
+                    typeof node.data?.name === 'string' ? node.data.name.trim() : '';
+                  const fromParts = [node.data?.['first name'], node.data?.['last name']]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim();
+                  const label = nameField || fromParts || node.id;
+                  return (
+                    <Chip
+                      key={node.id}
+                      component={RouterLink}
+                      to={`/person/${encodeURIComponent(node.id)}`}
+                      label={label}
+                      clickable
+                      color="primary"
+                      variant="outlined"
+                      size="small"
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
+        </Paper>
 
-      {treeData && (
-        <FamilyChartEditor
-          data={treeData}
-          remountKey={chartGeneration}
-          onDataChange={setTreeData}
-          onPersistedData={handlePersistedData}
-          onUpdate={(data) => appendLog(`onUpdate (${data.length} people)`)}
-          onAdd={(data, ids) =>
-            appendLog(`onAdd [${ids.join(', ')}] → ${data.length} people total`)
-          }
-          onRemove={(data, ids) =>
-            appendLog(`onRemove [${ids.join(', ')}] → ${data.length} people total`)
-          }
-        />
-      )}
+        {loading && <SessionLoading message="Loading chart…" />}
+        {error && (
+          <Alert severity="error" role="alert">
+            {error}
+          </Alert>
+        )}
 
-      {eventLog.length > 0 && (
-        <section className="event-log" aria-label="Edit event log">
-          <h2>Recent interactions</h2>
-          <ol>
-            {eventLog.map((line, i) => (
-              <li key={`${i}-${line}`}>
-                <code>{line}</code>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-    </div>
+        {treeData && (
+          <FamilyChartEditor
+            data={treeData}
+            remountKey={chartGeneration}
+            onDataChange={setTreeData}
+            onPersistedData={handlePersistedData}
+            onUpdate={(data) => appendLog(`onUpdate (${data.length} people)`)}
+            onAdd={(data, ids) =>
+              appendLog(`onAdd [${ids.join(', ')}] → ${data.length} people total`)
+            }
+            onRemove={(data, ids) =>
+              appendLog(`onRemove [${ids.join(', ')}] → ${data.length} people total`)
+            }
+          />
+        )}
+
+        {eventLog.length > 0 && (
+          <Paper elevation={1} sx={{ p: 2 }} aria-label="Edit event log">
+            <Typography variant="h2" component="h2" gutterBottom>
+              Recent interactions
+            </Typography>
+            <Divider sx={{ mb: 1 }} />
+            <List dense sx={{ py: 0, maxHeight: 320, overflow: 'auto' }}>
+              {eventLog.map((line, i) => (
+                <ListItem key={`${i}-${line}`} sx={{ py: 0.25, display: 'block' }}>
+                  <Typography variant="caption" component="code" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                    {line}
+                  </Typography>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
+      </Stack>
+    </Container>
   );
 }

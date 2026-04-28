@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import { MemoryRouter } from 'react-router-dom';
+import { appTheme } from './theme/appTheme';
 
 jest.mock('./components/FamilyChartEditor', () => ({
   FamilyChartEditor: () => <div data-testid="family-chart-root" />,
@@ -70,9 +72,12 @@ afterEach(() => {
 
 test('loads chart and renders editor placeholder when authenticated', async () => {
   render(
-    <MemoryRouter initialEntries={['/']}>
-      <App />
-    </MemoryRouter>,
+    <ThemeProvider theme={appTheme}>
+      <CssBaseline />
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    </ThemeProvider>,
   );
   await waitFor(() => {
     expect(screen.getByTestId('family-chart-root')).toBeInTheDocument();

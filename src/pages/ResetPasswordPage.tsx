@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Container from '@mui/material/Container';
+import Link from '@mui/material/Link';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { resetPasswordRequest } from '../auth/authApi';
 
 export function ResetPasswordPage() {
@@ -28,54 +37,58 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="auth-page">
-      <h1>Set new password</h1>
-      <form className="auth-form" onSubmit={onSubmit}>
-        <label className="auth-field">
-          <span>Reset token</span>
-          <input
-            type="text"
-            autoComplete="off"
-            value={token}
-            onChange={(ev) => setToken(ev.target.value)}
-            required
-            placeholder="Paste token from email"
-          />
-        </label>
-        <label className="auth-field">
-          <span>New password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(ev) => setPassword(ev.target.value)}
-            required
-            minLength={6}
-          />
-        </label>
-        <label className="auth-field">
-          <span>Confirm password</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={passwordConfirmation}
-            onChange={(ev) => setPasswordConfirmation(ev.target.value)}
-            required
-            minLength={6}
-          />
-        </label>
-        {error && (
-          <p className="auth-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button type="submit" className="auth-submit" disabled={busy}>
-          {busy ? 'Saving…' : 'Update password'}
-        </button>
-      </form>
-      <p className="auth-links">
-        <Link to="/login">Back to sign in</Link>
-      </p>
-    </div>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
+        <Typography variant="h1" component="h1" gutterBottom align="center">
+          Set new password
+        </Typography>
+        <Box component="form" onSubmit={onSubmit} noValidate>
+          <Stack spacing={2}>
+            <TextField
+              label="Reset token"
+              value={token}
+              onChange={(ev) => setToken(ev.target.value)}
+              required
+              fullWidth
+              placeholder="Paste token from email"
+              autoComplete="off"
+            />
+            <TextField
+              label="New password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              required
+              fullWidth
+              slotProps={{ htmlInput: { minLength: 6 } }}
+            />
+            <TextField
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              value={passwordConfirmation}
+              onChange={(ev) => setPasswordConfirmation(ev.target.value)}
+              required
+              fullWidth
+              slotProps={{ htmlInput: { minLength: 6 } }}
+            />
+            {error && (
+              <Alert severity="error" role="alert">
+                {error}
+              </Alert>
+            )}
+            <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
+              {busy ? 'Saving…' : 'Update password'}
+            </Button>
+          </Stack>
+        </Box>
+        <Typography align="center" sx={{ mt: 3 }}>
+          <Link component={RouterLink} to="/login" variant="body2">
+            Back to sign in
+          </Link>
+        </Typography>
+      </Paper>
+    </Container>
   );
 }
