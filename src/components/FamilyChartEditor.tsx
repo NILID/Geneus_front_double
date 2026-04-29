@@ -121,6 +121,15 @@ export function FamilyChartEditor({
 
     const editTree = chart
       .editTree()
+      .setAddRelLabels(
+        {
+          father: 'Отец',
+          mother: 'Мать',
+          spouse: 'Супруг(а)',
+          son: 'Сын',
+          daughter: 'Дочь',
+        }
+      )
       .setFields(editFields)
       .setPostSubmit(() => {
         void persistLatestTree();
@@ -154,6 +163,7 @@ export function FamilyChartEditor({
     chart
       .updateMainId('1')
       .updateTree({ initial: true });
+    
     internalChangeRef.current = true;
 
     return () => {
