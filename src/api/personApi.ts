@@ -20,6 +20,7 @@ export interface PersonDetail {
   date_of_death: string | null;
   location_of_birth: string | null;
   location_of_death: string | null;
+  avatar_url: string | null;
   parents: PersonSummary[];
   partners: PersonSummary[];
   children: PersonSummary[];
@@ -71,6 +72,8 @@ export interface PersonUpdateInput {
   date_of_death: string | null;
   location_of_birth: string | null;
   location_of_death: string | null;
+  /** If set, request is sent as multipart/form-data with the file. */
+  avatar?: File | null;
 }
 
 function trimToNull(s: string | null | undefined): string | null {
@@ -89,31 +92,57 @@ function dateInputToApi(isoOrEmpty: string | null | undefined): string | null {
   return t.length >= 10 ? t.slice(0, 10) : t;
 }
 
+function appendPersonFormData(fd: FormData, input: PersonUpdateInput) {
+  const p = (key: string, value: string) => {
+    fd.append(`person[${key}]`, value);
+  };
+  p('name', input.name.trim());
+  p('gender', input.gender);
+  p('bio', trimToNull(input.bio) ?? '');
+  p('date_of_birth', dateInputToApi(input.date_of_birth) ?? '');
+  p('date_of_death', dateInputToApi(input.date_of_death) ?? '');
+  p('location_of_birth', trimToNull(input.location_of_birth) ?? '');
+  p('location_of_death', trimToNull(input.location_of_death) ?? '');
+}
+
 export async function updatePerson(
   personId: string,
   input: PersonUpdateInput,
 ): Promise<PersonDetail> {
+  const hasAvatar = input.avatar instanceof File;
   const res = await fetch(
     `${API_BASE}/api/v1/people/${encodeURIComponent(personId)}`,
-    {
-      method: 'PATCH',
-      headers: (() => {
-        const h = authHeaders();
-        h.set('Content-Type', 'application/json');
-        return h;
-      })(),
-      body: JSON.stringify({
-        person: {
-          name: input.name.trim(),
-          gender: input.gender,
-          bio: trimToNull(input.bio),
-          date_of_birth: dateInputToApi(input.date_of_birth),
-          date_of_death: dateInputToApi(input.date_of_death),
-          location_of_birth: trimToNull(input.location_of_birth),
-          location_of_death: trimToNull(input.location_of_death),
+    hasAvatar
+      ? (() => {
+          const fd = new FormData();
+          appendPersonFormData(fd, input);
+          fd.append('person[avatar]', input.avatar!);
+          const h = authHeaders();
+          return {
+            method: 'PATCH' as const,
+            headers: h,
+            body: fd,
+          };
+        })()
+      : {
+          method: 'PATCH' as const,
+          headers: (() => {
+            const h = authHeaders();
+            h.set('Content-Type', 'application/json');
+            return h;
+          })(),
+          body: JSON.stringify({
+            person: {
+              name: input.name.trim(),
+              gender: input.gender,
+              bio: trimToNull(input.bio),
+              date_of_birth: dateInputToApi(input.date_of_birth),
+              date_of_death: dateInputToApi(input.date_of_death),
+              location_of_birth: trimToNull(input.location_of_birth),
+              location_of_death: trimToNull(input.location_of_death),
+            },
+          }),
         },
-      }),
-    },
   );
   if (res.status === 404) {
     throw new Error('Персона не найдена');

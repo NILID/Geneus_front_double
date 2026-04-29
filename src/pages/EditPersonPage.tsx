@@ -3,6 +3,7 @@ import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
+import MuiAvatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import FormControl from '@mui/material/FormControl';
@@ -45,6 +46,9 @@ export function EditPersonPage() {
   const [locationOfBirth, setLocationOfBirth] = useState('');
   const [locationOfDeath, setLocationOfDeath] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!personId) {
@@ -68,6 +72,7 @@ export function EditPersonPage() {
         setDateOfDeath(isoToDateInput(p.date_of_death));
         setLocationOfBirth(p.location_of_birth ?? '');
         setLocationOfDeath(p.location_of_death ?? '');
+        setAvatarUrl(p.avatar_url ?? null);
       })
       .catch((e: unknown) => {
         if (!cancelled) {
@@ -83,6 +88,44 @@ export function EditPersonPage() {
       cancelled = true;
     };
   }, [personId]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
+  function onAvatarPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) {
+      return;
+    }
+    if (!f.type.startsWith('image/')) {
+      setSaveError('Нужен файл в формате изображения');
+      return;
+    }
+    setSaveError(null);
+    setAvatarPreview((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return URL.createObjectURL(f);
+    });
+    setAvatarFile(f);
+  }
+
+  function clearPickedAvatar() {
+    setAvatarFile(null);
+    setAvatarPreview((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return null;
+    });
+  }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,6 +143,9 @@ export function EditPersonPage() {
       location_of_birth: locationOfBirth || null,
       location_of_death: locationOfDeath || null,
     };
+    if (avatarFile) {
+      input.avatar = avatarFile;
+    }
     updatePerson(personId, input)
       .then((updated) => {
         navigate(`/person/${encodeURIComponent(updated.chart_external_id)}`, { replace: true });
@@ -158,6 +204,34 @@ export function EditPersonPage() {
             </Alert>
           )}
           <Stack spacing={2.5}>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Аватар
+              </Typography>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}
+              >
+                <MuiAvatar
+                  src={avatarPreview ?? avatarUrl ?? undefined}
+                  alt={name}
+                  sx={{ width: 96, height: 96 }}
+                />
+                <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
+                  <Button component="label" variant="outlined" disabled={saving}>
+                    {avatarUrl || avatarFile ? 'Выбрать другое фото' : 'Загрузить фото'}
+                    <input type="file" accept="image/*" hidden onChange={onAvatarPicked} />
+                  </Button>
+                  {avatarFile && (
+                    <Button type="button" size="small" onClick={clearPickedAvatar} disabled={saving}>
+                      Сбросить выбор
+                    </Button>
+                  )}
+                </Stack>
+              </Stack>
+            </Box>
+
             <TextField
               required
               label="Полное имя"

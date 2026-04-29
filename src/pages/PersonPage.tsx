@@ -156,15 +156,15 @@ export function PersonPage() {
         <Divider sx={{ my: 2 }} />
 
         <Box component="dl" sx={{ m: 0 }}>
-          {person.date_of_birth && <FactRow label="Born" value={person.date_of_birth} />}
-          {person.date_of_death && <FactRow label="Died" value={person.date_of_death} />}
+          {person.date_of_birth && <FactRow label="Дата рождения" value={person.date_of_birth} />}
+          {person.date_of_death && <FactRow label="Дата смерти" value={person.date_of_death} />}
           {person.location_of_birth && (
-            <FactRow label="Birth place" value={person.location_of_birth} />
+            <FactRow label="Место рождения" value={person.location_of_birth} />
           )}
           {person.location_of_death && (
-            <FactRow label="Death place" value={person.location_of_death} />
+            <FactRow label="Место смерти" value={person.location_of_death} />
           )}
-          {person.bio && <FactRow label="Bio" value={person.bio} />}
+          {person.bio && <FactRow label="Биография" value={person.bio} />}
         </Box>
 
         <RelatedList title="Родители" people={person.parents} />
