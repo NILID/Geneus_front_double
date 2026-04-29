@@ -5,6 +5,7 @@ import './App.css';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FamilyChartPage } from './pages/FamilyChartPage';
+import { EditPersonPage } from './pages/EditPersonPage';
 import { PersonPage } from './pages/PersonPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LoginPage } from './pages/LoginPage';
@@ -50,6 +51,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <FamilyChartPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/person/:personId/edit"
+        element={
+          <ProtectedRoute>
+            <EditPersonPage />
           </ProtectedRoute>
         }
       />

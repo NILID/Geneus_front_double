@@ -6,7 +6,6 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
-import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Paper from '@mui/material/Paper';
@@ -15,7 +14,7 @@ import Typography from '@mui/material/Typography';
 import { useAuth } from '../auth/AuthContext';
 import { FamilyChartEditor } from '../components/FamilyChartEditor';
 import { SessionLoading } from '../components/SessionLoading';
-import { fetchFamilyChart, FAMILY_CHART_URL, type FamilyChartData } from '../familyChartApi';
+import { fetchFamilyChart, type FamilyChartData } from '../familyChartApi';
 
 export function FamilyChartPage() {
   const { user, logout } = useAuth();
@@ -57,7 +56,7 @@ export function FamilyChartPage() {
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load family chart');
+          setError(e instanceof Error ? e.message : 'Не удалось загрузить данные древа');
         }
       })
       .finally(() => {
@@ -91,7 +90,7 @@ export function FamilyChartPage() {
             </Button>
           </Stack>
           <Typography variant="h1" component="h1" align="center" gutterBottom>
-            Family Chart (editable)
+            Семейное древо
           </Typography>
 
           {treeData && treeData.length > 0 && (
@@ -123,7 +122,7 @@ export function FamilyChartPage() {
           )}
         </Paper>
 
-        {loading && <SessionLoading message="Loading chart…" />}
+        {loading && <SessionLoading message="Загружаем древо…" />}
         {error && (
           <Alert severity="error" role="alert">
             {error}

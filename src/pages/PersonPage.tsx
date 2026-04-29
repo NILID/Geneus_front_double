@@ -34,7 +34,7 @@ function RelatedList({ title, people }: { title: string; people: PersonSummary[]
               component={RouterLink}
               to={`/person/${encodeURIComponent(p.chart_external_id)}`}
             >
-              <ListItemText primary={p.name} secondary={`id ${p.id}`} />
+              <ListItemText primary={p.name} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -64,7 +64,7 @@ export function PersonPage() {
 
   useEffect(() => {
     if (!personId) {
-      setError('Missing person id');
+      setError('По такому id не найдена персона');
       setLoading(false);
       return;
     }
@@ -80,7 +80,7 @@ export function PersonPage() {
       .catch((e: unknown) => {
         if (!cancelled) {
           setPerson(null);
-          setError(e instanceof Error ? e.message : 'Failed to load person');
+          setError(e instanceof Error ? e.message : 'Произошла ошибка при загрузке персоны');
         }
       })
       .finally(() => {
@@ -94,17 +94,17 @@ export function PersonPage() {
   }, [personId]);
 
   if (loading) {
-    return <SessionLoading message="Loading person…" />;
+    return <SessionLoading message="Загружаем персону…" />;
   }
 
   if (error || !person) {
     return (
       <Container maxWidth="sm" sx={{ py: 4 }}>
         <Alert severity="error" role="alert" sx={{ mb: 2 }}>
-          {error ?? 'Not found'}
+          {error ?? 'Не найдено'}
         </Alert>
         <Button component={RouterLink} to="/" variant="contained">
-          Back to chart
+          Назад к древу
         </Button>
       </Container>
     );
@@ -114,10 +114,21 @@ export function PersonPage() {
     <Container maxWidth="md" sx={{ py: 3 }}>
       <Breadcrumbs sx={{ mb: 2 }}>
         <Link component={RouterLink} to="/" underline="hover" color="inherit">
-          Family chart
+          Семейное древо
         </Link>
         <Typography color="text.primary">{person.name}</Typography>
       </Breadcrumbs>
+
+      {personId && (
+        <Button
+          component={RouterLink}
+          to={`/person/${encodeURIComponent(personId)}/edit`}
+          variant="outlined"
+          sx={{ mb: 2 }}
+        >
+          Редактировать
+        </Button>
+      )}
 
       <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
         <Typography variant="h1" component="h1" gutterBottom>
@@ -132,10 +143,6 @@ export function PersonPage() {
             mb: 2,
           }}
         >
-          <Typography variant="body2" color="text.secondary">
-            Chart id:
-          </Typography>
-          <Chip size="small" label={person.chart_external_id} variant="outlined" />
           {person.chart_id && person.chart_id !== person.chart_external_id && (
             <>
               <Typography variant="body2" color="text.secondary">
@@ -149,7 +156,6 @@ export function PersonPage() {
         <Divider sx={{ my: 2 }} />
 
         <Box component="dl" sx={{ m: 0 }}>
-          <FactRow label="Gender" value={person.gender} />
           {person.date_of_birth && <FactRow label="Born" value={person.date_of_birth} />}
           {person.date_of_death && <FactRow label="Died" value={person.date_of_death} />}
           {person.location_of_birth && (
@@ -161,9 +167,9 @@ export function PersonPage() {
           {person.bio && <FactRow label="Bio" value={person.bio} />}
         </Box>
 
-        <RelatedList title="Parents" people={person.parents} />
-        <RelatedList title="Partners" people={person.partners} />
-        <RelatedList title="Children" people={person.children} />
+        <RelatedList title="Родители" people={person.parents} />
+        <RelatedList title="Партнеры" people={person.partners} />
+        <RelatedList title="Дети" people={person.children} />
       </Paper>
     </Container>
   );

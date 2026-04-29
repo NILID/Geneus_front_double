@@ -63,7 +63,7 @@ function authorizedInit(init: RequestInit = {}): RequestInit {
 export async function fetchFamilyChart(): Promise<FamilyChartData> {
   const res = await fetch(FAMILY_CHART_URL, authorizedInit());
   if (!res.ok) {
-    throw new Error(`Family chart request failed: ${res.status} ${res.statusText}`);
+    throw new Error(`Не удалось получить данные о семейном древе: ${res.status} ${res.statusText}`);
   }
   const json: unknown = await res.json();
   return normalizeFamilyChartPayload(json);

@@ -30,7 +30,7 @@ export function ResetPasswordPage() {
       await resetPasswordRequest(token.trim(), password, passwordConfirmation);
       navigate('/login', { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reset failed');
+      setError(err instanceof Error ? err.message : 'Произошла ошибка при попытке сброса');
     } finally {
       setBusy(false);
     }
@@ -45,16 +45,16 @@ export function ResetPasswordPage() {
         <Box component="form" onSubmit={onSubmit} noValidate>
           <Stack spacing={2}>
             <TextField
-              label="Reset token"
+              label="Специальный код"
               value={token}
               onChange={(ev) => setToken(ev.target.value)}
               required
               fullWidth
-              placeholder="Paste token from email"
+              placeholder="Укажите код из письма"
               autoComplete="off"
             />
             <TextField
-              label="New password"
+              label="Новый пароль"
               type="password"
               autoComplete="new-password"
               value={password}
@@ -64,7 +64,7 @@ export function ResetPasswordPage() {
               slotProps={{ htmlInput: { minLength: 6 } }}
             />
             <TextField
-              label="Confirm password"
+              label="Повторите новый пароль"
               type="password"
               autoComplete="new-password"
               value={passwordConfirmation}
@@ -79,13 +79,13 @@ export function ResetPasswordPage() {
               </Alert>
             )}
             <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
-              {busy ? 'Saving…' : 'Update password'}
+              {busy ? 'Сохранение…' : 'Обновить пароль'}
             </Button>
           </Stack>
         </Box>
         <Typography align="center" sx={{ mt: 3 }}>
           <Link component={RouterLink} to="/login" variant="body2">
-            Back to sign in
+            Назад к странице входа
           </Link>
         </Typography>
       </Paper>
