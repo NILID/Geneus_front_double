@@ -39,7 +39,7 @@ export function RegisterPage() {
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
         <Typography variant="h1" component="h1" gutterBottom align="center">
-          Create account
+          Создание аккаунта
         </Typography>
         <Box component="form" onSubmit={onSubmit} noValidate>
           <Stack spacing={2}>
@@ -53,7 +53,7 @@ export function RegisterPage() {
               fullWidth
             />
             <TextField
-              label="Password"
+              label="Пароль"
               type="password"
               autoComplete="new-password"
               value={password}
@@ -61,10 +61,10 @@ export function RegisterPage() {
               required
               fullWidth
               slotProps={{ htmlInput: { minLength: 6 } }}
-              helperText="At least 6 characters"
+              helperText="Не менее 6 символов"
             />
             <TextField
-              label="Confirm password"
+              label="Повторите пароль"
               type="password"
               autoComplete="new-password"
               value={passwordConfirmation}
@@ -79,13 +79,13 @@ export function RegisterPage() {
               </Alert>
             )}
             <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
-              {busy ? 'Creating…' : 'Register'}
+              {busy ? 'Создание…' : 'Зарегистрироваться'}
             </Button>
           </Stack>
         </Box>
         <Typography align="center" sx={{ mt: 3 }}>
           <Link component={RouterLink} to="/login" variant="body2">
-            Already have an account?
+            Уже есть аккаунт? Войти
           </Link>
         </Typography>
       </Paper>

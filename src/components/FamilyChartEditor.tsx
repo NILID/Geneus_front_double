@@ -91,9 +91,9 @@ export function FamilyChartEditor({
       internalChangeRef.current = true;
       callbacksRef.current.onDataChange(savedNodes);
       callbacksRef.current.onPersistedData?.(savedNodes);
-      console.log('Family tree saved from edit form submit.');
+      console.log('Древо семьи сохранено из формы редактирования.')
     } catch (error) {
-      console.error('Family tree save failed:', error);
+      console.error('Не удалось сохранить древо семьи:', error);
     } finally {
       setIsSaving(false);
       isSavingRef.current = false;

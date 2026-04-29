@@ -40,7 +40,7 @@ export function LoginPage() {
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
         <Typography variant="h1" component="h1" gutterBottom align="center">
-          Sign in
+          Вход
         </Typography>
         <Box component="form" onSubmit={onSubmit} noValidate>
           <Stack spacing={2}>
@@ -55,7 +55,7 @@ export function LoginPage() {
               fullWidth
             />
             <TextField
-              label="Password"
+              label="Пароль"
               type="password"
               name="password"
               autoComplete="current-password"
@@ -70,7 +70,7 @@ export function LoginPage() {
               </Alert>
             )}
             <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
-              {busy ? 'Signing in…' : 'Sign in'}
+              {busy ? 'Выполняется вход…' : 'Войти'}
             </Button>
           </Stack>
         </Box>
@@ -85,13 +85,13 @@ export function LoginPage() {
           }}
         >
           <Link component={RouterLink} to="/register" variant="body2">
-            Create an account
+            Создать аккаунт
           </Link>
           <Typography variant="body2" color="text.secondary">
             ·
           </Typography>
           <Link component={RouterLink} to="/forgot-password" variant="body2">
-            Forgot password?
+            Забыли пароль?
           </Link>
         </Box>
       </Paper>

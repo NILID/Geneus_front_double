@@ -35,14 +35,13 @@ export function ForgotPasswordPage() {
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
         <Typography variant="h1" component="h1" gutterBottom align="center">
-          Reset password
+          Сброс пароля
         </Typography>
         {done ? (
           <Alert severity="info">
-            If that email exists in our system, you will receive reset instructions shortly. You
-            can close this tab or return to{' '}
+            Если такой адрес электронной почты существует в нашей системе, вы получите инструкцию
             <Link component={RouterLink} to="/login">
-              sign in
+              Войти
             </Link>
             .
           </Alert>
@@ -50,8 +49,8 @@ export function ForgotPasswordPage() {
           <Box component="form" onSubmit={onSubmit} noValidate>
             <Stack spacing={2}>
               <Typography variant="body2" color="text.secondary">
-                Enter your account email. We will send a link with a reset token (check your mailer
-                configuration in development).
+                Введите адрес электронной почты, который вы использовали для регистрации.
+                Мы отправим вам ссылку для сброса пароля.
               </Typography>
               <TextField
                 label="Email"
@@ -68,14 +67,14 @@ export function ForgotPasswordPage() {
                 </Alert>
               )}
               <Button type="submit" variant="contained" size="large" disabled={busy} fullWidth>
-                {busy ? 'Sending…' : 'Send reset instructions'}
+                {busy ? 'Отправка…' : 'Отправить письмо для сброса'}
               </Button>
             </Stack>
           </Box>
         )}
         <Typography align="center" sx={{ mt: 3 }}>
           <Link component={RouterLink} to="/login" variant="body2">
-            Back to sign in
+            Вернуться к странице входа
           </Link>
         </Typography>
       </Paper>

@@ -87,35 +87,15 @@ export function FamilyChartPage() {
               {user?.email}
             </Typography>
             <Button variant="outlined" color="inherit" size="small" onClick={() => void handleLogout()}>
-              Sign out
+              Выйти
             </Button>
           </Stack>
           <Typography variant="h1" component="h1" align="center" gutterBottom>
             Family Chart (editable)
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" gutterBottom>
-            Data: <Box component="code" sx={{ color: 'primary.light' }}>{FAMILY_CHART_URL}</Box>
-          </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 560, mx: 'auto' }}>
-            Click a person to edit. Submitting the person form auto-saves to Rails with{' '}
-            <Box component="code" sx={{ color: 'text.primary' }}>nodes</Box> and{' '}
-            <Box component="code" sx={{ color: 'text.primary' }}>removed_ids</Box>.{' '}
-            <Link component={RouterLink} to="/login">
-              Session
-            </Link>{' '}
-            is required for the API.
-          </Typography>
 
           {treeData && treeData.length > 0 && (
             <Box sx={{ mt: 2 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                component="div"
-                sx={{ mb: 1, textAlign: 'center' }}
-              >
-                Profiles
-              </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
                 {treeData.map((node) => {
                   const nameField =
