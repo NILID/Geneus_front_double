@@ -28,7 +28,7 @@ export type FamilyChartEditorProps = {
 } & FamilyChartEditCallbacks;
 
 const DEFAULT_CARD_DISPLAY: string[][] = [['first name', 'last name'], ['birthday']];
-const DEFAULT_EDIT_FIELDS = ['first name', 'last name', 'birthday', 'gender'];
+const DEFAULT_EDIT_FIELDS = ['first name', 'last name', 'birthday'];
 
 /**
  * Interactive tree using `family-chart` EditTree (same flow as docs example “17-edit-tree”):
