@@ -151,7 +151,9 @@ export function FamilyChartEditor({
     createdForKeyRef.current = remountKey;
     lastExportRef.current = data;
 
-    chart.updateTree({ initial: true });
+    chart
+      .updateMainId('1')
+      .updateTree({ initial: true });
     internalChangeRef.current = true;
 
     return () => {
@@ -176,6 +178,7 @@ export function FamilyChartEditor({
     }
     chartRef.current.updateData(data);
     chartRef.current.updateTree({ tree_position: 'inherit' });
+
     lastExportRef.current = data;
   }, [data]);
 
