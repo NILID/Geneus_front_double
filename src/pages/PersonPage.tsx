@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
+import MuiAvatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Chip from '@mui/material/Chip';
@@ -15,7 +16,12 @@ import ListItemText from '@mui/material/ListItemText';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { fetchPerson, personDisplayName, type PersonDetail, type PersonSummary } from '../api/personApi';
+import {
+  fetchPerson,
+  personDisplayName,
+  type PersonDetail,
+  type PersonSummary,
+} from '../api/personApi';
 import { SessionLoading } from '../components/SessionLoading';
 
 function RelatedList({ title, people }: { title: string; people: PersonSummary[] }) {
@@ -41,6 +47,18 @@ function RelatedList({ title, people }: { title: string; people: PersonSummary[]
       </List>
     </Box>
   );
+}
+
+function personAvatarFallback(p: PersonDetail): string {
+  const fn = p.first_name.trim();
+  const ln = p.last_name?.trim();
+  if (fn && ln) {
+    return (fn[0] + ln[0]).toUpperCase();
+  }
+  if (fn.length >= 2) {
+    return fn.slice(0, 2).toUpperCase();
+  }
+  return fn.slice(0, 1).toUpperCase() || '?';
 }
 
 function FactRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -131,27 +149,45 @@ export function PersonPage() {
       )}
 
       <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h1" component="h1" gutterBottom>
-          {personDisplayName(person)}
-        </Typography>
-        <Box
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
           sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 1,
+            alignItems: { xs: 'center', sm: 'flex-start' },
             mb: 2,
           }}
         >
-          {person.chart_id && person.chart_id !== person.chart_external_id && (
-            <>
-              <Typography variant="body2" color="text.secondary">
-                stored
-              </Typography>
-              <Chip size="small" label={person.chart_id} variant="outlined" />
-            </>
-          )}
-        </Box>
+          <MuiAvatar
+            src={person.avatar_url ?? undefined}
+            alt={personDisplayName(person)}
+            sx={{ width: 120, height: 120, flexShrink: 0 }}
+          >
+            {person.avatar_url ? null : personAvatarFallback(person)}
+          </MuiAvatar>
+          <Box sx={{ flex: 1, minWidth: 0, textAlign: { xs: 'center', sm: 'left' } }}>
+            <Typography variant="h1" component="h1" gutterBottom>
+              {personDisplayName(person)}
+            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 1,
+                justifyContent: { xs: 'center', sm: 'flex-start' },
+              }}
+            >
+              {person.chart_id && person.chart_id !== person.chart_external_id && (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    stored
+                  </Typography>
+                  <Chip size="small" label={person.chart_id} variant="outlined" />
+                </>
+              )}
+            </Box>
+          </Box>
+        </Stack>
 
         <Divider sx={{ my: 2 }} />
 
