@@ -15,7 +15,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { fetchPerson, type PersonDetail, type PersonSummary } from '../api/personApi';
+import { fetchPerson, personDisplayName, type PersonDetail, type PersonSummary } from '../api/personApi';
 import { SessionLoading } from '../components/SessionLoading';
 
 function RelatedList({ title, people }: { title: string; people: PersonSummary[] }) {
@@ -34,7 +34,7 @@ function RelatedList({ title, people }: { title: string; people: PersonSummary[]
               component={RouterLink}
               to={`/person/${encodeURIComponent(p.chart_external_id)}`}
             >
-              <ListItemText primary={p.name} />
+              <ListItemText primary={personDisplayName(p)} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -116,7 +116,7 @@ export function PersonPage() {
         <Link component={RouterLink} to="/" underline="hover" color="inherit">
           Семейное древо
         </Link>
-        <Typography color="text.primary">{person.name}</Typography>
+        <Typography color="text.primary">{personDisplayName(person)}</Typography>
       </Breadcrumbs>
 
       {personId && (
@@ -132,7 +132,7 @@ export function PersonPage() {
 
       <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
         <Typography variant="h1" component="h1" gutterBottom>
-          {person.name}
+          {personDisplayName(person)}
         </Typography>
         <Box
           sx={{

@@ -4,14 +4,14 @@ import { getStoredToken } from '../auth/storage';
 export interface PersonSummary {
   id: number;
   chart_external_id: string;
-  name: string;
+  first_name: string;
+  last_name: string | null;
 }
 
 export interface PersonDetail {
   id: number;
   chart_id: string | null;
   chart_external_id: string;
-  name: string;
   first_name: string;
   last_name: string | null;
   gender: string;
@@ -34,6 +34,17 @@ function authHeaders(): Headers {
     h.set('Authorization', `Bearer ${t}`);
   }
   return h;
+}
+
+/** Склеивает имя и фамилию для заголовков и списков. */
+export function personDisplayName(p: {
+  first_name: string;
+  last_name: string | null | undefined;
+}): string {
+  const parts = [p.first_name?.trim(), p.last_name?.trim()].filter(
+    (s): s is string => Boolean(s),
+  );
+  return parts.join(' ');
 }
 
 export async function fetchPerson(personId: string): Promise<PersonDetail> {
@@ -65,7 +76,8 @@ export async function fetchPerson(personId: string): Promise<PersonDetail> {
 }
 
 export interface PersonUpdateInput {
-  name: string;
+  first_name: string;
+  last_name: string | null;
   gender: string;
   bio: string | null;
   date_of_birth: string | null;
@@ -96,7 +108,8 @@ function appendPersonFormData(fd: FormData, input: PersonUpdateInput) {
   const p = (key: string, value: string) => {
     fd.append(`person[${key}]`, value);
   };
-  p('name', input.name.trim());
+  p('first_name', input.first_name.trim());
+  p('last_name', trimToNull(input.last_name) ?? '');
   p('gender', input.gender);
   p('bio', trimToNull(input.bio) ?? '');
   p('date_of_birth', dateInputToApi(input.date_of_birth) ?? '');
@@ -133,7 +146,8 @@ export async function updatePerson(
           })(),
           body: JSON.stringify({
             person: {
-              name: input.name.trim(),
+              first_name: input.first_name.trim(),
+              last_name: trimToNull(input.last_name),
               gender: input.gender,
               bio: trimToNull(input.bio),
               date_of_birth: dateInputToApi(input.date_of_birth),

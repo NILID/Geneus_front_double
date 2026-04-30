@@ -15,7 +15,12 @@ import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { fetchPerson, updatePerson, type PersonUpdateInput } from '../api/personApi';
+import {
+  fetchPerson,
+  personDisplayName,
+  updatePerson,
+  type PersonUpdateInput,
+} from '../api/personApi';
 import { SessionLoading } from '../components/SessionLoading';
 
 function isoToDateInput(iso: string | null | undefined): string {
@@ -38,7 +43,8 @@ export function EditPersonPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('male');
   const [bio, setBio] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -64,8 +70,9 @@ export function EditPersonPage() {
         if (cancelled) {
           return;
         }
-        setDisplayName(p.name);
-        setName(p.name);
+        setDisplayName(personDisplayName(p));
+        setFirstName(p.first_name);
+        setLastName(p.last_name ?? '');
         setGender(p.gender);
         setBio(p.bio ?? '');
         setDateOfBirth(isoToDateInput(p.date_of_birth));
@@ -135,7 +142,8 @@ export function EditPersonPage() {
     setSaveError(null);
     setSaving(true);
     const input: PersonUpdateInput = {
-      name,
+      first_name: firstName,
+      last_name: lastName.trim() ? lastName : null,
       gender,
       bio: bio || null,
       date_of_birth: dateOfBirth || null,
@@ -215,7 +223,7 @@ export function EditPersonPage() {
               >
                 <MuiAvatar
                   src={avatarPreview ?? avatarUrl ?? undefined}
-                  alt={name}
+                  alt={personDisplayName({ first_name: firstName, last_name: lastName || null })}
                   sx={{ width: 96, height: 96 }}
                 />
                 <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
@@ -234,12 +242,21 @@ export function EditPersonPage() {
 
             <TextField
               required
-              label="Полное имя"
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              label="Имя"
+              name="first_name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               fullWidth
-              autoComplete="name"
+              autoComplete="given-name"
+            />
+
+            <TextField
+              label="Фамилия"
+              name="last_name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              fullWidth
+              autoComplete="family-name"
             />
 
             <FormControl fullWidth>
@@ -314,7 +331,7 @@ export function EditPersonPage() {
               >
                 Отмена
               </Button>
-              <Button type="submit" variant="contained" disabled={saving || !name.trim()}>
+              <Button type="submit" variant="contained" disabled={saving || !firstName.trim()}>
                 {saving ? 'Сохраняем…' : 'Сохранить'}
               </Button>
             </Stack>

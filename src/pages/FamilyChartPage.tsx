@@ -97,13 +97,11 @@ export function FamilyChartPage() {
             <Box sx={{ mt: 2 }}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
                 {treeData.map((node) => {
-                  const nameField =
-                    typeof node.data?.name === 'string' ? node.data.name.trim() : '';
-                  const fromParts = [node.data?.['first name'], node.data?.['last name']]
-                    .filter(Boolean)
-                    .join(' ')
-                    .trim();
-                  const label = nameField || fromParts || node.id;
+                  const label =
+                    [node.data?.['first name'], node.data?.['last name']]
+                      .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+                      .join(' ')
+                      .trim() || node.id;
                   return (
                     <Chip
                       key={node.id}
