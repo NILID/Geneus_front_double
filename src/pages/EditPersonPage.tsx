@@ -36,7 +36,7 @@ const GENDERS: { value: string; label: string }[] = [
 ];
 
 export function EditPersonPage() {
-  const { personId } = useParams<{ personId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -57,7 +57,7 @@ export function EditPersonPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!personId) {
+    if (!id) {
       setLoadError('По такому id не найдена персона');
       setLoading(false);
       return;
@@ -65,7 +65,7 @@ export function EditPersonPage() {
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    fetchPerson(personId)
+    fetchPerson(id)
       .then((p) => {
         if (cancelled) {
           return;
@@ -94,7 +94,7 @@ export function EditPersonPage() {
     return () => {
       cancelled = true;
     };
-  }, [personId]);
+  }, [id]);
 
   useEffect(() => {
     return () => {
@@ -136,7 +136,7 @@ export function EditPersonPage() {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!personId) {
+    if (!id) {
       return;
     }
     setSaveError(null);
@@ -154,9 +154,9 @@ export function EditPersonPage() {
     if (avatarFile) {
       input.avatar = avatarFile;
     }
-    updatePerson(personId, input)
+    updatePerson(id, input)
       .then((updated) => {
-        navigate(`/person/${encodeURIComponent(updated.chart_external_id)}`, { replace: true });
+        navigate(`/person/${encodeURIComponent(String(updated.id))}`, { replace: true });
       })
       .catch((err: unknown) => {
         setSaveError(err instanceof Error ? err.message : 'Не удалось сохранить');
@@ -170,7 +170,7 @@ export function EditPersonPage() {
     return <SessionLoading message="Загружаем персону…" />;
   }
 
-  if (loadError || !personId) {
+  if (loadError || !id) {
     return (
       <Container maxWidth="sm" sx={{ py: 4 }}>
         <Alert severity="error" role="alert" sx={{ mb: 2 }}>
@@ -191,7 +191,7 @@ export function EditPersonPage() {
         </Link>
         <Link
           component={RouterLink}
-          to={`/person/${encodeURIComponent(personId)}`}
+          to={`/person/${encodeURIComponent(id)}`}
           underline="hover"
           color="inherit"
         >
@@ -326,7 +326,7 @@ export function EditPersonPage() {
             <Stack direction="row" spacing={2} sx={{ pt: 1, justifyContent: 'flex-end' }}>
               <Button
                 component={RouterLink}
-                to={`/person/${encodeURIComponent(personId)}`}
+                to={`/person/${encodeURIComponent(id)}`}
                 disabled={saving}
               >
                 Отмена

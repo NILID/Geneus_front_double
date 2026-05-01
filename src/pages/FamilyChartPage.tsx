@@ -106,7 +106,7 @@ export function FamilyChartPage() {
                     <Chip
                       key={node.id}
                       component={RouterLink}
-                      to={`/person/${encodeURIComponent(node.id)}`}
+                      to={`/person/${encodeURIComponent(String(node.person_id ?? node.id))}`}
                       label={label}
                       clickable
                       color="primary"

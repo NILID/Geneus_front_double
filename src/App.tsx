@@ -55,7 +55,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/person/:personId/edit"
+        path="/person/:id/edit"
         element={
           <ProtectedRoute>
             <EditPersonPage />
@@ -63,7 +63,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/person/:personId"
+        path="/person/:id"
         element={
           <ProtectedRoute>
             <PersonPage />

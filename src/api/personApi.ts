@@ -47,9 +47,9 @@ export function personDisplayName(p: {
   return parts.join(' ');
 }
 
-export async function fetchPerson(personId: string): Promise<PersonDetail> {
+export async function fetchPerson(id: string): Promise<PersonDetail> {
   const res = await fetch(
-    `${API_BASE}/api/v1/people/${encodeURIComponent(personId)}`,
+    `${API_BASE}/api/v1/people/${encodeURIComponent(id)}`,
     { headers: authHeaders() },
   );
   if (res.status === 404) {
@@ -119,12 +119,12 @@ function appendPersonFormData(fd: FormData, input: PersonUpdateInput) {
 }
 
 export async function updatePerson(
-  personId: string,
+  id: string,
   input: PersonUpdateInput,
 ): Promise<PersonDetail> {
   const hasAvatar = input.avatar instanceof File;
   const res = await fetch(
-    `${API_BASE}/api/v1/people/${encodeURIComponent(personId)}`,
+    `${API_BASE}/api/v1/people/${encodeURIComponent(id)}`,
     hasAvatar
       ? (() => {
           const fd = new FormData();

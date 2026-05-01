@@ -6,6 +6,8 @@ import { getStoredToken } from './auth/storage';
  */
 export interface FamilyChartPerson {
   id: string;
+  /** Database primary key; same identifiers work in `/person/:id` and the people API. */
+  person_id?: number;
   data: {
     gender: 'M' | 'F';
     [key: string]: unknown;

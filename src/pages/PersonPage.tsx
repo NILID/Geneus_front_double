@@ -38,7 +38,7 @@ function RelatedList({ title, people }: { title: string; people: PersonSummary[]
           <ListItem key={p.id} disablePadding sx={{ py: 0.25 }}>
             <ListItemButton
               component={RouterLink}
-              to={`/person/${encodeURIComponent(p.chart_external_id)}`}
+              to={`/person/${encodeURIComponent(String(p.id))}`}
             >
               <ListItemText primary={personDisplayName(p)} />
             </ListItemButton>
@@ -75,13 +75,13 @@ function FactRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export function PersonPage() {
-  const { personId } = useParams<{ personId: string }>();
+  const { id } = useParams<{ id: string }>();
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!personId) {
+    if (!id) {
       setError('По такому id не найдена персона');
       setLoading(false);
       return;
@@ -89,7 +89,7 @@ export function PersonPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchPerson(personId)
+    fetchPerson(id)
       .then((p) => {
         if (!cancelled) {
           setPerson(p);
@@ -109,7 +109,7 @@ export function PersonPage() {
     return () => {
       cancelled = true;
     };
-  }, [personId]);
+  }, [id]);
 
   if (loading) {
     return <SessionLoading message="Загружаем персону…" />;
@@ -137,10 +137,10 @@ export function PersonPage() {
         <Typography color="text.primary">{personDisplayName(person)}</Typography>
       </Breadcrumbs>
 
-      {personId && (
+      {id && (
         <Button
           component={RouterLink}
-          to={`/person/${encodeURIComponent(personId)}/edit`}
+          to={`/person/${encodeURIComponent(id)}/edit`}
           variant="outlined"
           sx={{ mb: 2 }}
         >
