@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
@@ -98,8 +97,7 @@ function OwnerPhotoMenu({
 
 export function MediaPage() {
   const reactId = useId();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
@@ -170,11 +168,6 @@ export function MediaPage() {
       cancelled = true;
     };
   }, []);
-
-  async function handleLogout() {
-    await logout();
-    navigate('/login', { replace: true });
-  }
 
   async function handleFilesSelected(files: FileList | null) {
     if (!files?.length) {
@@ -247,27 +240,7 @@ export function MediaPage() {
     <Container maxWidth="lg" sx={{ py: 2, px: { xs: 1, sm: 2 } }}>
       <Stack spacing={2}>
         <Paper elevation={2} sx={{ p: 2 }}>
-          <Stack
-            spacing={2}
-            sx={{
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'stretch', sm: 'center' },
-              justifyContent: 'space-between',
-            }}
-          >
-            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
-              <Button component={RouterLink} to="/" variant="text" size="small" color="inherit">
-                Семейное древо
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                {user?.email}
-              </Typography>
-            </Stack>
-            <Button variant="outlined" color="inherit" size="small" onClick={() => void handleLogout()}>
-              Выйти
-            </Button>
-          </Stack>
-          <Typography variant="h1" component="h1" align="center" sx={{ mt: 2 }} gutterBottom>
+          <Typography variant="h1" component="h1" align="center" gutterBottom>
             Медиа
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>

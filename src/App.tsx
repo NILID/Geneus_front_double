@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import './App.css';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthenticatedLayout } from './components/AuthenticatedLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FamilyChartPage } from './pages/FamilyChartPage';
 import { EditPersonPage } from './pages/EditPersonPage';
@@ -51,7 +52,9 @@ function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <FamilyChartPage />
+            <AuthenticatedLayout>
+              <FamilyChartPage />
+            </AuthenticatedLayout>
           </ProtectedRoute>
         }
       />
@@ -59,7 +62,9 @@ function AppRoutes() {
         path="/person/:id/edit"
         element={
           <ProtectedRoute>
-            <EditPersonPage />
+            <AuthenticatedLayout>
+              <EditPersonPage />
+            </AuthenticatedLayout>
           </ProtectedRoute>
         }
       />
@@ -67,7 +72,9 @@ function AppRoutes() {
         path="/person/:id"
         element={
           <ProtectedRoute>
-            <PersonPage />
+            <AuthenticatedLayout>
+              <PersonPage />
+            </AuthenticatedLayout>
           </ProtectedRoute>
         }
       />
@@ -75,7 +82,9 @@ function AppRoutes() {
         path="/media"
         element={
           <ProtectedRoute>
-            <MediaPage />
+            <AuthenticatedLayout>
+              <MediaPage />
+            </AuthenticatedLayout>
           </ProtectedRoute>
         }
       />

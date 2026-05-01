@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
@@ -11,19 +10,11 @@ import ListItem from '@mui/material/ListItem';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useAuth } from '../auth/AuthContext';
 import { FamilyChartEditor } from '../components/FamilyChartEditor';
 import { SessionLoading } from '../components/SessionLoading';
 import { fetchFamilyChart, type FamilyChartData } from '../familyChartApi';
 
 export function FamilyChartPage() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  async function handleLogout() {
-    await logout();
-    navigate('/login', { replace: true });
-  }
   const [treeData, setTreeData] = useState<FamilyChartData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,32 +64,6 @@ export function FamilyChartPage() {
     <Container maxWidth={false} sx={{ py: 2, px: { xs: 1, sm: 2 } }}>
       <Stack spacing={2}>
         <Paper elevation={2} sx={{ p: 2 }}>
-          <Stack
-            spacing={2}
-            sx={{
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 2,
-            }}
-          >
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Button component={RouterLink} to="/media" variant="text" size="small" color="inherit">
-                Медиа
-              </Button>
-              <Typography variant="body2" color="text.secondary">
-                {user?.email}
-              </Typography>
-            </Stack>
-            <Button variant="outlined" color="inherit" size="small" onClick={() => void handleLogout()}>
-              Выйти
-            </Button>
-          </Stack>
           <Typography variant="h1" component="h1" align="center" gutterBottom>
             Семейное древо
           </Typography>
