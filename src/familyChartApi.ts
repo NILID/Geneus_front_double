@@ -52,6 +52,31 @@ export function normalizeFamilyChartPayload(json: unknown): FamilyChartData {
   );
 }
 
+/** Варианты для выбора персон при отметке на фото (id — ключ в БД для API персон). */
+export interface ChartPersonOption {
+  id: number;
+  label: string;
+}
+
+export function chartPeopleAsTagOptions(chart: FamilyChartData): ChartPersonOption[] {
+  const byId = new Map<number, ChartPersonOption>();
+  for (const node of chart) {
+    const numericFromId =
+      typeof node.id === 'string' && /^\d+$/.test(node.id) ? Number(node.id) : NaN;
+    const rawId = node.person_id ?? (Number.isFinite(numericFromId) ? numericFromId : NaN);
+    if (!Number.isFinite(rawId) || rawId < 1) {
+      continue;
+    }
+    const first =
+      typeof node.data?.['first name'] === 'string' ? node.data['first name'].trim() : '';
+    const last =
+      typeof node.data?.['last name'] === 'string' ? node.data['last name'].trim() : '';
+    const label = [first, last].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
+    byId.set(rawId, { id: rawId, label });
+  }
+  return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+}
+
 function authorizedInit(init: RequestInit = {}): RequestInit {
   const headers = new Headers(init.headers ?? undefined);
   headers.set('Accept', 'application/json');

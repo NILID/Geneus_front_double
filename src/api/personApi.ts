@@ -8,6 +8,13 @@ export interface PersonSummary {
   last_name: string | null;
 }
 
+export interface TaggedGalleryPhoto {
+  id: number;
+  caption: string | null;
+  image_url: string | null;
+  created_at: string;
+}
+
 export interface PersonDetail {
   id: number;
   chart_id: string | null;
@@ -24,6 +31,7 @@ export interface PersonDetail {
   parents: PersonSummary[];
   partners: PersonSummary[];
   children: PersonSummary[];
+  tagged_gallery_photos: TaggedGalleryPhoto[];
 }
 
 function authHeaders(): Headers {
@@ -72,7 +80,11 @@ export async function fetchPerson(id: string): Promise<PersonDetail> {
   if (!o.person) {
     throw new Error('Не удалось получить персон');
   }
-  return o.person;
+  const p = o.person;
+  return {
+    ...p,
+    tagged_gallery_photos: Array.isArray(p.tagged_gallery_photos) ? p.tagged_gallery_photos : [],
+  };
 }
 
 export interface PersonUpdateInput {
@@ -187,5 +199,9 @@ export async function updatePerson(
   if (!o.person) {
     throw new Error('Не удалось обновить персону');
   }
-  return o.person;
+  const p = o.person;
+  return {
+    ...p,
+    tagged_gallery_photos: Array.isArray(p.tagged_gallery_photos) ? p.tagged_gallery_photos : [],
+  };
 }

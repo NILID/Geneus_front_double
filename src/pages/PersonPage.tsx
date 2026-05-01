@@ -7,6 +7,9 @@ import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
+import ImageList from '@mui/material/ImageList';
+import ImageListItem from '@mui/material/ImageListItem';
+import ImageListItemBar from '@mui/material/ImageListItemBar';
 import Button from '@mui/material/Button';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
@@ -206,6 +209,35 @@ export function PersonPage() {
         <RelatedList title="Родители" people={person.parents} />
         <RelatedList title="Партнеры" people={person.partners} />
         <RelatedList title="Дети" people={person.children} />
+
+        {person.tagged_gallery_photos.length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="h2" component="h2" gutterBottom>
+              Фотографии, где отмечена эта персона
+            </Typography>
+            <ImageList variant="masonry" cols={3} gap={10} sx={{ width: '100%' }}>
+              {person.tagged_gallery_photos.map((ph) => (
+                <ImageListItem key={ph.id} sx={{ borderRadius: 1, overflow: 'hidden' }}>
+                  {ph.image_url ? (
+                    <img
+                      src={ph.image_url}
+                      alt={ph.caption ?? ''}
+                      loading="lazy"
+                      style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
+                    />
+                  ) : (
+                    <Box sx={{ minHeight: 100, bgcolor: 'action.hover' }} />
+                  )}
+                  <ImageListItemBar
+                    title={ph.caption?.trim() ? ph.caption : 'Без подписи'}
+                    subtitle={new Date(ph.created_at).toLocaleString()}
+                    position="bottom"
+                  />
+                </ImageListItem>
+              ))}
+            </ImageList>
+          </Box>
+        )}
       </Paper>
     </Container>
   );

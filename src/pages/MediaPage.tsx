@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
+import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -28,8 +29,10 @@ import {
   uploadGalleryPhoto,
   type GalleryPhoto,
 } from '../api/galleryPhotoApi';
+import { personDisplayName } from '../api/personApi';
 import { useAuth } from '../auth/AuthContext';
 import { SessionLoading } from '../components/SessionLoading';
+import { chartPeopleAsTagOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
 
 function GearIcon(props: SvgIconProps) {
   return (
@@ -112,6 +115,8 @@ export function MediaPage() {
   const [editPhoto, setEditPhoto] = useState<GalleryPhoto | null>(null);
   const [editCaption, setEditCaption] = useState('');
   const [editFile, setEditFile] = useState<File | null>(null);
+  const [editTagIds, setEditTagIds] = useState<number[]>([]);
+  const [chartPeople, setChartPeople] = useState<ChartPersonOption[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -122,6 +127,24 @@ export function MediaPage() {
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Не удалось загрузить галерею');
       });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchFamilyChart()
+      .then((chart) => {
+        if (!cancelled) {
+          setChartPeople(chartPeopleAsTagOptions(chart));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setChartPeople([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -191,6 +214,7 @@ export function MediaPage() {
     setEditPhoto(null);
     setEditCaption('');
     setEditFile(null);
+    setEditTagIds([]);
     setEditError(null);
     if (editFileInputRef.current) {
       editFileInputRef.current.value = '';
@@ -207,7 +231,8 @@ export function MediaPage() {
       const cap = editCaption.trim() === '' ? null : editCaption.trim();
       await updateGalleryPhoto(editPhoto.id, {
         caption: cap,
-        image: editFile,
+        image: editFile ?? undefined,
+        person_ids: editTagIds,
       });
       await load();
       closeEditDialog();
@@ -246,8 +271,8 @@ export function MediaPage() {
             Медиа
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
-            Общая галерея: все вошедшие пользователи видят фотографии друг друга. Редактировать и удалять
-            можно только свои снимки.
+            Общая галерея: все вошедшие пользователи видят фотографии друг друга. Редактировать, отмечать
+            персон и удалять можно только свои снимки (список персон для отметок берётся из семейного древа).
           </Typography>
 
           <Stack
@@ -320,7 +345,12 @@ export function MediaPage() {
                     [
                       item.uploaded_by_email ?? 'Неизвестно',
                       new Date(item.created_at).toLocaleString(),
-                    ].join(' · ')
+                      item.tagged_people.length > 0
+                        ? `На фото: ${item.tagged_people.map((p) => personDisplayName(p)).join(', ')}`
+                        : '',
+                    ]
+                      .filter((s) => s !== '')
+                      .join(' · ')
                   }
                   position="bottom"
                   actionIcon={
@@ -331,6 +361,7 @@ export function MediaPage() {
                           setEditPhoto(item);
                           setEditCaption(item.caption ?? '');
                           setEditFile(null);
+                          setEditTagIds(item.tagged_people.map((p) => p.id));
                           setEditError(null);
                           if (editFileInputRef.current) {
                             editFileInputRef.current.value = '';
@@ -379,6 +410,22 @@ export function MediaPage() {
             >
               {editFile ? `Новый файл: ${editFile.name}` : 'Заменить изображение (необязательно)'}
             </Button>
+            <Autocomplete
+              multiple
+              options={chartPeople}
+              getOptionLabel={(o) => o.label}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              value={chartPeople.filter((o) => editTagIds.includes(o.id))}
+              onChange={(_, v) => setEditTagIds(v.map((o) => o.id))}
+              disabled={editSaving}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Отмеченные на фото персоны"
+                  placeholder={chartPeople.length ? 'Выберите из древа' : 'Загрузите древо или откройте позже'}
+                />
+              )}
+            />
             {editError && (
               <Alert severity="error" role="alert">
                 {editError}
