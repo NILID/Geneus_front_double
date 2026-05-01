@@ -11,6 +11,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { MediaPage } from './pages/MediaPage';
 import { SessionLoading } from './components/SessionLoading';
 
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
@@ -67,6 +68,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <PersonPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/media"
+        element={
+          <ProtectedRoute>
+            <MediaPage />
           </ProtectedRoute>
         }
       />

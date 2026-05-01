@@ -82,9 +82,19 @@ export function FamilyChartPage() {
               mb: 2,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
-              {user?.email}
-            </Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Button component={RouterLink} to="/media" variant="text" size="small" color="inherit">
+                Медиа
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                {user?.email}
+              </Typography>
+            </Stack>
             <Button variant="outlined" color="inherit" size="small" onClick={() => void handleLogout()}>
               Выйти
             </Button>
