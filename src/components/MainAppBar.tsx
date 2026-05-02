@@ -20,6 +20,7 @@ export function MainAppBar() {
 
   const treeActive = pathname === '/';
   const mediaActive = pathname === '/media';
+  const mapActive = pathname === '/map';
 
   return (
     <AppBar
@@ -71,6 +72,18 @@ export function MainAppBar() {
             }}
           >
             Медиа
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/map"
+            color="inherit"
+            size="small"
+            sx={{
+              fontWeight: mapActive ? 600 : 400,
+              ...(mapActive && { bgcolor: 'action.selected' }),
+            }}
+          >
+            Карта
           </Button>
         </Stack>
         <Box sx={{ flexGrow: 1 }} />

@@ -13,6 +13,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { MediaPage } from './pages/MediaPage';
+import { MapPage } from './pages/MapPage';
 import { SessionLoading } from './components/SessionLoading';
 
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
@@ -84,6 +85,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <MediaPage />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/map"
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <MapPage />
             </AuthenticatedLayout>
           </ProtectedRoute>
         }
