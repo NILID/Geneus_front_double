@@ -33,6 +33,8 @@ import { useAuth } from '../auth/AuthContext';
 import { SessionLoading } from '../components/SessionLoading';
 import { chartPeopleAsTagOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
 
+import useFancybox from '../hooks/useFancybox';
+
 function GearIcon(props: SvgIconProps) {
   return (
     <SvgIcon {...props} viewBox="0 0 24 24" fontSize="inherit">
@@ -117,6 +119,8 @@ export function MediaPage() {
   const [chartPeople, setChartPeople] = useState<ChartPersonOption[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  const [setFancyboxRoot] = useFancybox({});
 
   const load = useCallback(() => {
     setError(null);
@@ -299,56 +303,80 @@ export function MediaPage() {
         )}
 
         {photos.length > 0 && (
-          <ImageList variant="masonry" cols={galleryCols} gap={12} sx={{ width: '100%', mb: 0 }}>
-            {photos.map((item) => (
-              <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
-                {item.image_url ? (
-                  <img
-                    src={item.image_url}
-                    alt={item.caption ?? ''}
-                    loading="lazy"
-                    style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
-                  />
-                ) : (
-                  <Box sx={{ minHeight: 120, bgcolor: 'action.hover' }} />
-                )}
-                <ImageListItemBar
-                  title={item.caption?.trim() ? item.caption : 'Без подписи'}
-                  subtitle={
-                    [
-                      item.uploaded_by_email ?? 'Неизвестно',
-                      new Date(item.created_at).toLocaleString(),
-                      item.tagged_people.length > 0
-                        ? `На фото: ${item.tagged_people.map((p) => personDisplayName(p)).join(', ')}`
-                        : '',
-                    ]
-                      .filter((s) => s !== '')
-                      .join(' · ')
-                  }
-                  position="bottom"
-                  actionIcon={
-                    user && item.user_id === user.id ? (
-                      <OwnerPhotoMenu
-                        menuInstanceId={`gallery-photo-menu-${reactId}-${item.id}`}
-                        onEdit={() => {
-                          setEditPhoto(item);
-                          setEditCaption(item.caption ?? '');
-                          setEditFile(null);
-                          setEditTagIds(item.tagged_people.map((p) => p.id));
-                          setEditError(null);
-                          if (editFileInputRef.current) {
-                            editFileInputRef.current.value = '';
-                          }
+          <Box ref={setFancyboxRoot} sx={{ width: '100%' }}>
+            <ImageList variant="masonry" cols={galleryCols} gap={12} sx={{ width: '100%', mb: 0 }}>
+              {photos.map((item) => {
+                const fancyCaption = [
+                  item.caption?.trim() ? item.caption : 'Без подписи',
+                  item.uploaded_by_email ?? 'Неизвестно',
+                  new Date(item.created_at).toLocaleString(),
+                  item.tagged_people.length > 0
+                    ? `На фото: ${item.tagged_people.map((p) => personDisplayName(p)).join(', ')}`
+                    : '',
+                ]
+                  .filter((s) => s !== '')
+                  .join(' · ');
+                return (
+                  <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
+                    {item.image_url ? (
+                      <a
+                        href={item.image_url}
+                        data-fancybox="gallery"
+                        data-caption={fancyCaption}
+                        style={{
+                          display: 'block',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          lineHeight: 0,
                         }}
-                        onDelete={() => void handleDelete(item.id)}
-                      />
-                    ) : undefined
-                  }
-                  actionPosition="right"
-                />
-              </ImageListItem>
-            ))}
-          </ImageList>
+                      >
+                        <img
+                          src={item.image_url}
+                          alt={item.caption ?? ''}
+                          loading="lazy"
+                          style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
+                        />
+                      </a>
+                    ) : (
+                      <Box sx={{ minHeight: 120, bgcolor: 'action.hover' }} />
+                    )}
+                    <ImageListItemBar
+                      title={item.caption?.trim() ? item.caption : 'Без подписи'}
+                      subtitle={
+                        [
+                          item.tagged_people.length > 0
+                            ? `На фото: ${item.tagged_people.map((p) => personDisplayName(p)).join(', ')}`
+                            : '',
+                        ]
+                          .filter((s) => s !== '')
+                          .join(' · ')
+                      }
+                      position="bottom"
+                      actionIcon={
+                        user && item.user_id === user.id ? (
+                          <OwnerPhotoMenu
+                            menuInstanceId={`gallery-photo-menu-${reactId}-${item.id}`}
+                            onEdit={() => {
+                              setEditPhoto(item);
+                              setEditCaption(item.caption ?? '');
+                              setEditFile(null);
+                              setEditTagIds(item.tagged_people.map((p) => p.id));
+                              setEditError(null);
+                              if (editFileInputRef.current) {
+                                editFileInputRef.current.value = '';
+                              }
+                            }}
+                            onDelete={() => void handleDelete(item.id)}
+                          />
+                        ) : undefined
+                      }
+                      actionPosition="right"
+                    />
+                  </ImageListItem>
+                );
+              })}
+            </ImageList>
+          </Box>
         )}
       </Stack>
 

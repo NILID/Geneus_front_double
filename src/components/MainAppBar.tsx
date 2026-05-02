@@ -58,7 +58,7 @@ export function MainAppBar() {
               ...(treeActive && { bgcolor: 'action.selected' }),
             }}
           >
-            Семейное древо
+            Древо
           </Button>
           <Button
             component={RouterLink}

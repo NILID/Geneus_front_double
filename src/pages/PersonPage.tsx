@@ -26,6 +26,7 @@ import {
   type PersonSummary,
 } from '../api/personApi';
 import { SessionLoading } from '../components/SessionLoading';
+import useFancybox from '../hooks/useFancybox';
 
 function RelatedList({ title, people }: { title: string; people: PersonSummary[] }) {
   if (people.length === 0) {
@@ -79,6 +80,7 @@ function FactRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function PersonPage() {
   const { id } = useParams<{ id: string }>();
+  const [setFancyboxRoot] = useFancybox({});
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -211,30 +213,49 @@ export function PersonPage() {
         <RelatedList title="Дети" people={person.children} />
 
         {person.tagged_gallery_photos.length > 0 && (
-          <Box sx={{ mt: 3 }}>
+          <Box ref={setFancyboxRoot} sx={{ mt: 3, width: '100%' }}>
             <Typography variant="h2" component="h2" gutterBottom>
               Фотографии, где отмечена эта персона
             </Typography>
             <ImageList variant="masonry" cols={3} gap={10} sx={{ width: '100%' }}>
-              {person.tagged_gallery_photos.map((ph) => (
-                <ImageListItem key={ph.id} sx={{ borderRadius: 1, overflow: 'hidden' }}>
-                  {ph.image_url ? (
-                    <img
-                      src={ph.image_url}
-                      alt={ph.caption ?? ''}
-                      loading="lazy"
-                      style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
+              {person.tagged_gallery_photos.map((ph) => {
+                const fancyCaption = [
+                  ph.caption?.trim() ? ph.caption : 'Без подписи',
+                  new Date(ph.created_at).toLocaleString(),
+                ]
+                  .filter((s) => s !== '')
+                  .join(' · ');
+                return (
+                  <ImageListItem key={ph.id} sx={{ borderRadius: 1, overflow: 'hidden' }}>
+                    {ph.image_url ? (
+                      <a
+                        href={ph.image_url}
+                        data-fancybox={`person-${person.id}`}
+                        data-caption={fancyCaption}
+                        style={{
+                          display: 'block',
+                          textDecoration: 'none',
+                          color: 'inherit',
+                          lineHeight: 0,
+                        }}
+                      >
+                        <img
+                          src={ph.image_url}
+                          alt={ph.caption ?? ''}
+                          loading="lazy"
+                          style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
+                        />
+                      </a>
+                    ) : (
+                      <Box sx={{ minHeight: 100, bgcolor: 'action.hover' }} />
+                    )}
+                    <ImageListItemBar
+                      title={ph.caption?.trim() ? ph.caption : 'Без подписи'}
+                      position="bottom"
                     />
-                  ) : (
-                    <Box sx={{ minHeight: 100, bgcolor: 'action.hover' }} />
-                  )}
-                  <ImageListItemBar
-                    title={ph.caption?.trim() ? ph.caption : 'Без подписи'}
-                    subtitle={new Date(ph.created_at).toLocaleString()}
-                    position="bottom"
-                  />
-                </ImageListItem>
-              ))}
+                  </ImageListItem>
+                );
+              })}
             </ImageList>
           </Box>
         )}
