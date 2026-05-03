@@ -21,6 +21,10 @@ import {
   updatePerson,
   type PersonUpdateInput,
 } from '../api/personApi';
+import { PlaceAutocomplete } from '../components/PlaceAutocomplete';
+import { SettlementMapPicker } from '../components/SettlementMapPicker';
+import type { PlaceSuggestion } from '../lib/osmGeocode';
+import { resolvePlaceCoordinates } from '../lib/osmGeocode';
 import { SessionLoading } from '../components/SessionLoading';
 
 function isoToDateInput(iso: string | null | undefined): string {
@@ -34,6 +38,9 @@ const GENDERS: { value: string; label: string }[] = [
   { value: 'male', label: 'Мужской' },
   { value: 'female', label: 'Женский' },
 ];
+
+const LOCATION_HELPER =
+  'Выберите населённый пункт из списка или кликните по карте ниже. Координаты для общей карты подставляются автоматически.';
 
 export function EditPersonPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,8 +56,12 @@ export function EditPersonPage() {
   const [bio, setBio] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [dateOfDeath, setDateOfDeath] = useState('');
-  const [locationOfBirth, setLocationOfBirth] = useState('');
-  const [locationOfDeath, setLocationOfDeath] = useState('');
+
+  const [birthPlace, setBirthPlace] = useState<PlaceSuggestion | null>(null);
+  const [birthInput, setBirthInput] = useState('');
+  const [deathPlace, setDeathPlace] = useState<PlaceSuggestion | null>(null);
+  const [deathInput, setDeathInput] = useState('');
+
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -77,8 +88,33 @@ export function EditPersonPage() {
         setBio(p.bio ?? '');
         setDateOfBirth(isoToDateInput(p.date_of_birth));
         setDateOfDeath(isoToDateInput(p.date_of_death));
-        setLocationOfBirth(p.location_of_birth ?? '');
-        setLocationOfDeath(p.location_of_death ?? '');
+
+        const bLabel = p.location_of_birth ?? '';
+        setBirthInput(bLabel);
+        if (bLabel && p.birth_latitude != null && p.birth_longitude != null) {
+          setBirthPlace({
+            id: 'persisted-birth',
+            label: bLabel,
+            lat: p.birth_latitude,
+            lng: p.birth_longitude,
+          });
+        } else {
+          setBirthPlace(null);
+        }
+
+        const dLabel = p.location_of_death ?? '';
+        setDeathInput(dLabel);
+        if (dLabel && p.death_latitude != null && p.death_longitude != null) {
+          setDeathPlace({
+            id: 'persisted-death',
+            label: dLabel,
+            lat: p.death_latitude,
+            lng: p.death_longitude,
+          });
+        } else {
+          setDeathPlace(null);
+        }
+
         setAvatarUrl(p.avatar_url ?? null);
       })
       .catch((e: unknown) => {
@@ -134,13 +170,48 @@ export function EditPersonPage() {
     });
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!id) {
       return;
     }
     setSaveError(null);
     setSaving(true);
+
+    const birthText = birthInput.trim();
+    const deathText = deathInput.trim();
+
+    let birth_latitude: number | null = null;
+    let birth_longitude: number | null = null;
+    let death_latitude: number | null = null;
+    let death_longitude: number | null = null;
+
+    if (birthText) {
+      const c = await resolvePlaceCoordinates(birthInput, birthPlace);
+      if (!c) {
+        setSaveError(
+          'Не удалось получить координаты для места рождения. Выберите населённый пункт из выпадающего списка или уточните название.',
+        );
+        setSaving(false);
+        return;
+      }
+      birth_latitude = c.lat;
+      birth_longitude = c.lng;
+    }
+
+    if (deathText) {
+      const c = await resolvePlaceCoordinates(deathInput, deathPlace);
+      if (!c) {
+        setSaveError(
+          'Не удалось получить координаты для места смерти. Выберите населённый пункт из выпадающего списка или уточните название.',
+        );
+        setSaving(false);
+        return;
+      }
+      death_latitude = c.lat;
+      death_longitude = c.lng;
+    }
+
     const input: PersonUpdateInput = {
       first_name: firstName,
       last_name: lastName.trim() ? lastName : null,
@@ -148,22 +219,25 @@ export function EditPersonPage() {
       bio: bio || null,
       date_of_birth: dateOfBirth || null,
       date_of_death: dateOfDeath || null,
-      location_of_birth: locationOfBirth || null,
-      location_of_death: locationOfDeath || null,
+      location_of_birth: birthText || null,
+      location_of_death: deathText || null,
+      birth_latitude,
+      birth_longitude,
+      death_latitude,
+      death_longitude,
     };
     if (avatarFile) {
       input.avatar = avatarFile;
     }
-    updatePerson(id, input)
-      .then((updated) => {
-        navigate(`/person/${encodeURIComponent(String(updated.id))}`, { replace: true });
-      })
-      .catch((err: unknown) => {
-        setSaveError(err instanceof Error ? err.message : 'Не удалось сохранить');
-      })
-      .finally(() => {
-        setSaving(false);
-      });
+
+    try {
+      const updated = await updatePerson(id, input);
+      navigate(`/person/${encodeURIComponent(String(updated.id))}`, { replace: true });
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : 'Не удалось сохранить');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -184,7 +258,7 @@ export function EditPersonPage() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 3 }}>
+    <Container maxWidth="md" sx={{ py: 3 }}>
       <Breadcrumbs sx={{ mb: 2 }}>
         <Link component={RouterLink} to="/" underline="hover" color="inherit">
           Семейное древо
@@ -297,20 +371,54 @@ export function EditPersonPage() {
               slotProps={{ inputLabel: { shrink: true } }}
             />
 
-            <TextField
-              label="Место рождения"
-              name="location_of_birth"
-              value={locationOfBirth}
-              onChange={(e) => setLocationOfBirth(e.target.value)}
-              fullWidth
+            <PlaceAutocomplete
+              fieldLabel="Место рождения"
+              helperText={LOCATION_HELPER}
+              place={birthPlace}
+              inputValue={birthInput}
+              onPlaceChange={(place, input) => {
+                setBirthPlace(place);
+                setBirthInput(input);
+              }}
+              disabled={saving}
             />
 
-            <TextField
-              label="Место смерти"
-              name="location_of_death"
-              value={locationOfDeath}
-              onChange={(e) => setLocationOfDeath(e.target.value)}
-              fullWidth
+            <SettlementMapPicker
+              title="Карта — место рождения"
+              variant="birth"
+              marker={
+                birthPlace ? { lat: birthPlace.lat, lng: birthPlace.lng } : null
+              }
+              onPick={(s) => {
+                setBirthPlace(s);
+                setBirthInput(s.label);
+              }}
+              disabled={saving}
+            />
+
+            <PlaceAutocomplete
+              fieldLabel="Место смерти"
+              helperText={LOCATION_HELPER}
+              place={deathPlace}
+              inputValue={deathInput}
+              onPlaceChange={(place, input) => {
+                setDeathPlace(place);
+                setDeathInput(input);
+              }}
+              disabled={saving}
+            />
+
+            <SettlementMapPicker
+              title="Карта — место смерти"
+              variant="death"
+              marker={
+                deathPlace ? { lat: deathPlace.lat, lng: deathPlace.lng } : null
+              }
+              onPick={(s) => {
+                setDeathPlace(s);
+                setDeathInput(s.label);
+              }}
+              disabled={saving}
             />
 
             <TextField

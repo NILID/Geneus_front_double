@@ -27,11 +27,53 @@ export interface PersonDetail {
   date_of_death: string | null;
   location_of_birth: string | null;
   location_of_death: string | null;
+  birth_latitude: number | null;
+  birth_longitude: number | null;
+  death_latitude: number | null;
+  death_longitude: number | null;
   avatar_url: string | null;
   parents: PersonSummary[];
   partners: PersonSummary[];
   children: PersonSummary[];
   tagged_gallery_photos: TaggedGalleryPhoto[];
+}
+
+/** Данные для карты «Места» (метки рождения и смерти). */
+export interface PersonMapLocation {
+  id: number;
+  chart_external_id: string;
+  first_name: string;
+  last_name: string | null;
+  location_of_birth: string | null;
+  location_of_death: string | null;
+  birth_latitude: number | null;
+  birth_longitude: number | null;
+  death_latitude: number | null;
+  death_longitude: number | null;
+}
+
+function parseCoord(v: unknown): number | null {
+  if (v == null) {
+    return null;
+  }
+  if (typeof v === 'number' && !Number.isNaN(v)) {
+    return v;
+  }
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v);
+    return Number.isNaN(n) ? null : n;
+  }
+  return null;
+}
+
+function normalizePersonDetail(raw: PersonDetail): PersonDetail {
+  return {
+    ...raw,
+    birth_latitude: parseCoord(raw.birth_latitude as unknown),
+    birth_longitude: parseCoord(raw.birth_longitude as unknown),
+    death_latitude: parseCoord(raw.death_latitude as unknown),
+    death_longitude: parseCoord(raw.death_longitude as unknown),
+  };
 }
 
 function authHeaders(): Headers {
@@ -80,11 +122,39 @@ export async function fetchPerson(id: string): Promise<PersonDetail> {
   if (!o.person) {
     throw new Error('Не удалось получить персон');
   }
-  const p = o.person;
+  const p = normalizePersonDetail(o.person);
   return {
     ...p,
     tagged_gallery_photos: Array.isArray(p.tagged_gallery_photos) ? p.tagged_gallery_photos : [],
   };
+}
+
+export async function fetchPeopleMapLocations(): Promise<PersonMapLocation[]> {
+  const res = await fetch(`${API_BASE}/api/v1/people/map_locations`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const body: unknown = await res.json();
+      if (body && typeof body === 'object' && typeof (body as { error?: string }).error === 'string') {
+        msg = (body as { error: string }).error;
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const json: unknown = await res.json();
+  const o = json as { people?: PersonMapLocation[] };
+  const list = Array.isArray(o.people) ? o.people : [];
+  return list.map((row) => ({
+    ...row,
+    birth_latitude: parseCoord(row.birth_latitude as unknown),
+    birth_longitude: parseCoord(row.birth_longitude as unknown),
+    death_latitude: parseCoord(row.death_latitude as unknown),
+    death_longitude: parseCoord(row.death_longitude as unknown),
+  }));
 }
 
 export interface PersonUpdateInput {
@@ -96,6 +166,10 @@ export interface PersonUpdateInput {
   date_of_death: string | null;
   location_of_birth: string | null;
   location_of_death: string | null;
+  birth_latitude: number | null;
+  birth_longitude: number | null;
+  death_latitude: number | null;
+  death_longitude: number | null;
   /** If set, request is sent as multipart/form-data with the file. */
   avatar?: File | null;
 }
@@ -116,6 +190,14 @@ function dateInputToApi(isoOrEmpty: string | null | undefined): string | null {
   return t.length >= 10 ? t.slice(0, 10) : t;
 }
 
+function appendCoord(fd: FormData, key: string, value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) {
+    fd.append(`person[${key}]`, '');
+  } else {
+    fd.append(`person[${key}]`, String(value));
+  }
+}
+
 function appendPersonFormData(fd: FormData, input: PersonUpdateInput) {
   const p = (key: string, value: string) => {
     fd.append(`person[${key}]`, value);
@@ -128,6 +210,10 @@ function appendPersonFormData(fd: FormData, input: PersonUpdateInput) {
   p('date_of_death', dateInputToApi(input.date_of_death) ?? '');
   p('location_of_birth', trimToNull(input.location_of_birth) ?? '');
   p('location_of_death', trimToNull(input.location_of_death) ?? '');
+  appendCoord(fd, 'birth_latitude', input.birth_latitude);
+  appendCoord(fd, 'birth_longitude', input.birth_longitude);
+  appendCoord(fd, 'death_latitude', input.death_latitude);
+  appendCoord(fd, 'death_longitude', input.death_longitude);
 }
 
 export async function updatePerson(
@@ -166,6 +252,10 @@ export async function updatePerson(
               date_of_death: dateInputToApi(input.date_of_death),
               location_of_birth: trimToNull(input.location_of_birth),
               location_of_death: trimToNull(input.location_of_death),
+              birth_latitude: input.birth_latitude,
+              birth_longitude: input.birth_longitude,
+              death_latitude: input.death_latitude,
+              death_longitude: input.death_longitude,
             },
           }),
         },
@@ -199,7 +289,7 @@ export async function updatePerson(
   if (!o.person) {
     throw new Error('Не удалось обновить персону');
   }
-  const p = o.person;
+  const p = normalizePersonDetail(o.person);
   return {
     ...p,
     tagged_gallery_photos: Array.isArray(p.tagged_gallery_photos) ? p.tagged_gallery_photos : [],
