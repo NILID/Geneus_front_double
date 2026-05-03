@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
@@ -7,7 +7,11 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -24,6 +28,18 @@ import { useAuth } from '../auth/AuthContext';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
 import { SessionLoading } from '../components/SessionLoading';
 import { chartPeopleAsTagOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
+
+type YearFilterValue = 'all' | 'none' | number;
+
+function distinctTakenYears(photos: GalleryPhoto[]): number[] {
+  const set = new Set<number>();
+  for (const p of photos) {
+    if (p.taken_year != null && !Number.isNaN(p.taken_year)) {
+      set.add(p.taken_year);
+    }
+  }
+  return Array.from(set).sort((a, b) => b - a);
+}
 
 export function MediaPage() {
   const { user } = useAuth();
@@ -48,6 +64,29 @@ export function MediaPage() {
   const [chartPeople, setChartPeople] = useState<ChartPersonOption[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [yearFilter, setYearFilter] = useState<YearFilterValue>('all');
+
+  const takenYearsInGallery = useMemo(() => distinctTakenYears(photos), [photos]);
+  const hasPhotosWithoutYear = useMemo(() => photos.some((p) => p.taken_year == null), [photos]);
+
+  const filteredPhotos = useMemo(() => {
+    if (yearFilter === 'all') {
+      return photos;
+    }
+    if (yearFilter === 'none') {
+      return photos.filter((p) => p.taken_year == null);
+    }
+    return photos.filter((p) => p.taken_year === yearFilter);
+  }, [photos, yearFilter]);
+
+  useEffect(() => {
+    if (yearFilter === 'none' && !hasPhotosWithoutYear) {
+      setYearFilter('all');
+    }
+    if (typeof yearFilter === 'number' && !takenYearsInGallery.includes(yearFilter)) {
+      setYearFilter('all');
+    }
+  }, [yearFilter, hasPhotosWithoutYear, takenYearsInGallery]);
 
   const load = useCallback(() => {
     setError(null);
@@ -268,8 +307,47 @@ export function MediaPage() {
           </Typography>
         )}
 
+        {!loading && photos.length > 0 && !error && (
+          <Paper elevation={1} sx={{ p: 1.5, maxWidth: 360, mx: 'auto' }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="media-year-filter-label">Год съёмки</InputLabel>
+              <Select
+                labelId="media-year-filter-label"
+                label="Год съёмки"
+                value={
+                  yearFilter === 'all' ? 'all' : yearFilter === 'none' ? 'none' : String(yearFilter)
+                }
+                onChange={(e) => {
+                  const v = e.target.value as string;
+                  if (v === 'all') {
+                    setYearFilter('all');
+                  } else if (v === 'none') {
+                    setYearFilter('none');
+                  } else {
+                    setYearFilter(Number.parseInt(v, 10));
+                  }
+                }}
+              >
+                <MenuItem value="all">Все годы</MenuItem>
+                {hasPhotosWithoutYear && <MenuItem value="none">Год не указан</MenuItem>}
+                {takenYearsInGallery.map((y) => (
+                  <MenuItem key={y} value={String(y)}>
+                    {y}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Paper>
+        )}
+
+        {!loading && photos.length > 0 && filteredPhotos.length === 0 && !error && (
+          <Typography color="text.secondary" align="center">
+            Нет фотографий, подходящих под выбранный фильтр.
+          </Typography>
+        )}
+
         <GalleryPhotoMasonry
-          photos={photos}
+          photos={filteredPhotos}
           fancyboxGroup="gallery"
           cols={galleryCols}
           gap={12}
