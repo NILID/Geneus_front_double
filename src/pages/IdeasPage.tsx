@@ -3,6 +3,10 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -33,6 +37,7 @@ export function IdeasPage() {
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [dialogIdea, setDialogIdea] = useState<Idea | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -132,7 +137,26 @@ export function IdeasPage() {
         ) : (
           <Stack spacing={2}>
             {ideas.map((idea) => (
-              <Paper key={idea.id} variant="outlined" sx={{ p: 2 }}>
+              <Paper
+                key={idea.id}
+                variant="outlined"
+                role="button"
+                tabIndex={0}
+                onClick={() => setDialogIdea(idea)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setDialogIdea(idea);
+                  }
+                }}
+                sx={{
+                  p: 2,
+                  cursor: 'pointer',
+                  transition: (theme) => theme.transitions.create('background-color', { duration: 120 }),
+                  '&:hover': { bgcolor: 'action.hover' },
+                  '&:focus-visible': { outline: (theme) => `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
+                }}
+              >
                 <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
                   {`${formatIdeaDate(idea.created_at)}${
                     idea.author_email ? ` · ${idea.author_email}` : ''
@@ -148,6 +172,38 @@ export function IdeasPage() {
             ))}
           </Stack>
         )}
+
+        <Dialog
+          open={dialogIdea != null}
+          onClose={() => setDialogIdea(null)}
+          maxWidth="md"
+          fullWidth
+          scroll="paper"
+          aria-labelledby="idea-dialog-title"
+        >
+          <DialogTitle id="idea-dialog-title">Идея</DialogTitle>
+          <DialogContent dividers sx={{ pt: 2 }}>
+            {dialogIdea ? (
+              <Stack spacing={2}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  {`${formatIdeaDate(dialogIdea.created_at)}${
+                    dialogIdea.author_email ? ` · ${dialogIdea.author_email}` : ''
+                  }${user && dialogIdea.user_id === user.id ? ' · вы' : ''}`}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  component="div"
+                  sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                >
+                  {dialogIdea.body}
+                </Typography>
+              </Stack>
+            ) : null}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDialogIdea(null)}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </Container>
   );
