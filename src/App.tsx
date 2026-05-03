@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { FamilyChartPage } from './pages/FamilyChartPage';
 import { EditPersonPage } from './pages/EditPersonPage';
 import { PersonPage } from './pages/PersonPage';
+import { PersonFactsPage } from './pages/PersonFactsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -66,6 +67,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <EditPersonPage />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/person/:id/facts"
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <PersonFactsPage />
             </AuthenticatedLayout>
           </ProtectedRoute>
         }

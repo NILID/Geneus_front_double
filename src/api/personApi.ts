@@ -1,6 +1,7 @@
 import { API_BASE } from '../auth/authApi';
 import { getStoredToken } from '../auth/storage';
 import { normalizeGalleryPhoto, type GalleryPhoto } from './galleryPhotoApi';
+import type { PersonFact } from './personFactsApi';
 
 export interface PersonSummary {
   id: number;
@@ -30,6 +31,8 @@ export interface PersonDetail {
   partners: PersonSummary[];
   children: PersonSummary[];
   tagged_gallery_photos: GalleryPhoto[];
+  /** До трёх самых новых фактов (полный список — отдельный запрос / страница). */
+  recent_person_facts: PersonFact[];
 }
 
 /** Данные для карты «Места» (метки рождения и смерти). */
@@ -70,6 +73,7 @@ function normalizePersonDetail(raw: PersonDetail): PersonDetail {
     tagged_gallery_photos: Array.isArray(raw.tagged_gallery_photos)
       ? raw.tagged_gallery_photos.map((gp) => normalizeGalleryPhoto(gp as GalleryPhoto))
       : [],
+    recent_person_facts: Array.isArray(raw.recent_person_facts) ? raw.recent_person_facts : [],
   };
 }
 

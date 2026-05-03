@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import MuiAvatar from '@mui/material/Avatar';
@@ -24,6 +24,11 @@ import {
 } from '../api/personApi';
 import { useAuth } from '../auth/AuthContext';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
+import {
+  AddPersonFactForm,
+  PersonFactsCarousel,
+  PersonFactsHeading,
+} from '../components/PersonFactsWidgets';
 import { SessionLoading } from '../components/SessionLoading';
 
 function RelatedList({ title, people }: { title: string; people: PersonSummary[] }) {
@@ -63,7 +68,7 @@ function personAvatarFallback(p: PersonDetail): string {
   return fn.slice(0, 1).toUpperCase() || '?';
 }
 
-function FactRow({ label, value }: { label: string; value: React.ReactNode }) {
+function PersonDetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <Stack spacing={1} sx={{ flexDirection: { xs: 'column', sm: 'row' }, py: 0.75 }}>
       <Typography component="dt" variant="body2" color="text.secondary" sx={{ minWidth: 140 }}>
@@ -82,6 +87,13 @@ export function PersonPage() {
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const reloadPerson = useCallback(() => {
+    if (!id) {
+      return Promise.resolve();
+    }
+    return fetchPerson(id).then(setPerson);
+  }, [id]);
 
   useEffect(() => {
     if (!id) {
@@ -195,20 +207,35 @@ export function PersonPage() {
         <Divider sx={{ my: 2 }} />
 
         <Box component="dl" sx={{ m: 0 }}>
-          {person.date_of_birth && <FactRow label="Дата рождения" value={person.date_of_birth} />}
-          {person.date_of_death && <FactRow label="Дата смерти" value={person.date_of_death} />}
+          {person.date_of_birth && (
+            <PersonDetailRow label="Дата рождения" value={person.date_of_birth} />
+          )}
+          {person.date_of_death && (
+            <PersonDetailRow label="Дата смерти" value={person.date_of_death} />
+          )}
           {person.location_of_birth && (
-            <FactRow label="Место рождения" value={person.location_of_birth} />
+            <PersonDetailRow label="Место рождения" value={person.location_of_birth} />
           )}
           {person.location_of_death && (
-            <FactRow label="Место смерти" value={person.location_of_death} />
+            <PersonDetailRow label="Место смерти" value={person.location_of_death} />
           )}
-          {person.bio && <FactRow label="Биография" value={person.bio} />}
+          {person.bio && <PersonDetailRow label="Биография" value={person.bio} />}
         </Box>
 
         <RelatedList title="Родители" people={person.parents} />
         <RelatedList title="Партнеры" people={person.partners} />
         <RelatedList title="Дети" people={person.children} />
+
+        {id && (
+          <>
+            <PersonFactsHeading personId={id} subtitle />
+            <PersonFactsCarousel
+              key={person.recent_person_facts.map((f) => f.id).join('-')}
+              facts={person.recent_person_facts}
+            />
+            <AddPersonFactForm personId={id} onAdded={reloadPerson} />
+          </>
+        )}
 
         <GalleryPhotoMasonry
           photos={person.tagged_gallery_photos}
