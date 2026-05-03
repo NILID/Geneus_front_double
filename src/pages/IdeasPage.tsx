@@ -7,11 +7,22 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
+import SvgIcon from '@mui/material/SvgIcon';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { MAX_BODY, createIdea, fetchIdeas, type Idea } from '../api/ideaApi';
+import {
+  MAX_BODY,
+  MAX_COMMENT_BODY,
+  createIdea,
+  createIdeaComment,
+  fetchIdeaComments,
+  fetchIdeas,
+  type Idea,
+  type IdeaComment,
+} from '../api/ideaApi';
 import { SessionLoading } from '../components/SessionLoading';
 import { useAuth } from '../auth/AuthContext';
 
@@ -29,6 +40,30 @@ function formatIdeaDate(iso: string): string {
   }
 }
 
+function CommentCountBadge({ count }: { count: number }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.5,
+        flexShrink: 0,
+        pt: 0.25,
+        color: 'text.secondary',
+      }}
+      aria-label={`Комментариев: ${count}`}
+    >
+      <SvgIcon fontSize="small" viewBox="0 0 24 24" aria-hidden>
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h10v2H7V9zm0-3h10v2H7V6zm0 6h7v2H7v-2z" />
+      </SvgIcon>
+      <Typography component="span" variant="caption" sx={{ fontWeight: 600, lineHeight: 1 }}>
+        {count}
+      </Typography>
+    </Box>
+  );
+}
+
 export function IdeasPage() {
   const { user, loading: authLoading } = useAuth();
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -38,6 +73,12 @@ export function IdeasPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [dialogIdea, setDialogIdea] = useState<Idea | null>(null);
+  const [dialogComments, setDialogComments] = useState<IdeaComment[]>([]);
+  const [dialogCommentsLoading, setDialogCommentsLoading] = useState(false);
+  const [dialogCommentsError, setDialogCommentsError] = useState<string | null>(null);
+  const [commentBody, setCommentBody] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentFormError, setCommentFormError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -61,6 +102,43 @@ export function IdeasPage() {
     };
   }, [load]);
 
+  const dialogIdeaId = dialogIdea?.id;
+
+  useEffect(() => {
+    if (dialogIdeaId == null) {
+      setDialogComments([]);
+      setDialogCommentsError(null);
+      setDialogCommentsLoading(false);
+      setCommentBody('');
+      setCommentFormError(null);
+      return;
+    }
+    let cancelled = false;
+    setDialogCommentsLoading(true);
+    setDialogCommentsError(null);
+    fetchIdeaComments(dialogIdeaId)
+      .then((list) => {
+        if (!cancelled) {
+          setDialogComments(list);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setDialogCommentsError(
+            e instanceof Error ? e.message : 'Не удалось загрузить комментарии',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setDialogCommentsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogIdeaId]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -78,6 +156,32 @@ export function IdeasPage() {
       setFormError(err instanceof Error ? err.message : 'Не удалось сохранить');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleCommentSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dialogIdea) {
+      return;
+    }
+    setCommentFormError(null);
+    const text = commentBody.trim();
+    if (!text) {
+      setCommentFormError('Введите текст комментария.');
+      return;
+    }
+    const ideaId = dialogIdea.id;
+    setCommentSubmitting(true);
+    try {
+      const { comment, comments_count } = await createIdeaComment(ideaId, text);
+      setCommentBody('');
+      setDialogComments((prev) => [...prev, comment]);
+      setIdeas((prev) => prev.map((i) => (i.id === ideaId ? { ...i, comments_count } : i)));
+      setDialogIdea((prev) => (prev && prev.id === ideaId ? { ...prev, comments_count } : prev));
+    } catch (err: unknown) {
+      setCommentFormError(err instanceof Error ? err.message : 'Не удалось отправить');
+    } finally {
+      setCommentSubmitting(false);
     }
   }
 
@@ -157,17 +261,22 @@ export function IdeasPage() {
                   '&:focus-visible': { outline: (theme) => `2px solid ${theme.palette.primary.main}`, outlineOffset: 2 },
                 }}
               >
-                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                  {`${formatIdeaDate(idea.created_at)}${
-                    idea.author_email ? ` · ${idea.author_email}` : ''
-                  }${user && idea.user_id === user.id ? ' · вы' : ''}`}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-                >
-                  {idea.body}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                      {`${formatIdeaDate(idea.created_at)}${
+                        idea.author_email ? ` · ${idea.author_email}` : ''
+                      }${user && idea.user_id === user.id ? ' · вы' : ''}`}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                    >
+                      {idea.body}
+                    </Typography>
+                  </Box>
+                  <CommentCountBadge count={idea.comments_count} />
+                </Box>
               </Paper>
             ))}
           </Stack>
@@ -197,6 +306,67 @@ export function IdeasPage() {
                 >
                   {dialogIdea.body}
                 </Typography>
+
+                <Divider />
+
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  Комментарии
+                </Typography>
+
+                {dialogCommentsLoading ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Загрузка комментариев…
+                  </Typography>
+                ) : dialogCommentsError ? (
+                  <Alert severity="error">{dialogCommentsError}</Alert>
+                ) : dialogComments.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Пока нет комментариев.
+                  </Typography>
+                ) : (
+                  <Stack spacing={1.5}>
+                    {dialogComments.map((c) => (
+                      <Paper key={c.id} variant="outlined" sx={{ p: 1.5, bgcolor: 'action.hover' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                          {`${formatIdeaDate(c.created_at)}${
+                            c.author_email ? ` · ${c.author_email}` : ''
+                          }${user && c.user_id === user.id ? ' · вы' : ''}`}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          component="div"
+                          sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                        >
+                          {c.body}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Stack>
+                )}
+
+                <Box
+                  component="form"
+                  onSubmit={(ev) => void handleCommentSubmit(ev)}
+                  sx={{ pt: 1 }}
+                >
+                  <Stack spacing={1.5}>
+                    {commentFormError ? <Alert severity="error">{commentFormError}</Alert> : null}
+                    <TextField
+                      label="Новый комментарий"
+                      value={commentBody}
+                      onChange={(e) => setCommentBody(e.target.value)}
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      size="small"
+                      slotProps={{ htmlInput: { maxLength: MAX_COMMENT_BODY } }}
+                      helperText={`${commentBody.length} / ${MAX_COMMENT_BODY}`}
+                    />
+                    <Button type="submit" variant="contained" size="small" disabled={commentSubmitting}>
+                      {commentSubmitting ? 'Отправка…' : 'Отправить комментарий'}
+                    </Button>
+                  </Stack>
+                </Box>
               </Stack>
             ) : null}
           </DialogContent>
