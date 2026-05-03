@@ -37,10 +37,12 @@ export function MediaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadCaption, setUploadCaption] = useState('');
+  const [uploadTakenYear, setUploadTakenYear] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const [editPhoto, setEditPhoto] = useState<GalleryPhoto | null>(null);
   const [editCaption, setEditCaption] = useState('');
+  const [editTakenYear, setEditTakenYear] = useState('');
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editTagIds, setEditTagIds] = useState<number[]>([]);
   const [chartPeople, setChartPeople] = useState<ChartPersonOption[]>([]);
@@ -106,11 +108,26 @@ export function MediaPage() {
     setError(null);
     try {
       const caption = uploadCaption.trim() === '' ? null : uploadCaption.trim();
+      const ty = uploadTakenYear.trim();
+      let takenYear: number | null = null;
+      if (ty !== '') {
+        const n = Number.parseInt(ty, 10);
+        const maxY = new Date().getFullYear() + 1;
+        if (!Number.isFinite(n) || n < 1800 || n > maxY) {
+          setError('Год съёмки: введите число вроде 1995 или оставьте поле пустым');
+          setUploading(false);
+          return;
+        }
+        takenYear = n;
+      }
       const fileArr = Array.from(files);
       await Promise.all(
-        fileArr.map((f, i) => uploadGalleryPhoto(f, i === 0 ? caption : null)),
+        fileArr.map((f, i) =>
+          uploadGalleryPhoto(f, i === 0 ? caption : null, undefined, i === 0 ? takenYear : null),
+        ),
       );
       setUploadCaption('');
+      setUploadTakenYear('');
       await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки');
@@ -135,6 +152,7 @@ export function MediaPage() {
   function closeEditDialog() {
     setEditPhoto(null);
     setEditCaption('');
+    setEditTakenYear('');
     setEditFile(null);
     setEditTagIds([]);
     setEditError(null);
@@ -151,8 +169,21 @@ export function MediaPage() {
     setEditError(null);
     try {
       const cap = editCaption.trim() === '' ? null : editCaption.trim();
+      const ty = editTakenYear.trim();
+      let takenYear: number | null = null;
+      if (ty !== '') {
+        const n = Number.parseInt(ty, 10);
+        const maxY = new Date().getFullYear() + 1;
+        if (!Number.isFinite(n) || n < 1800 || n > maxY) {
+          setEditError('Год съёмки: введите число вроде 1995 или оставьте поле пустым');
+          setEditSaving(false);
+          return;
+        }
+        takenYear = n;
+      }
       await updateGalleryPhoto(editPhoto.id, {
         caption: cap,
+        taken_year: takenYear,
         image: editFile ?? undefined,
         person_ids: editTagIds,
       });
@@ -194,6 +225,16 @@ export function MediaPage() {
               fullWidth
               size="small"
               disabled={uploading}
+            />
+            <TextField
+              label="Год съёмки (необязательно)"
+              value={uploadTakenYear}
+              onChange={(e) => setUploadTakenYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              fullWidth
+              size="small"
+              disabled={uploading}
+              placeholder="Например, 1998"
+              slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*' } }}
             />
             <input
               ref={fileInputRef}
@@ -238,6 +279,9 @@ export function MediaPage() {
           onEdit={(item) => {
             setEditPhoto(item as GalleryPhoto);
             setEditCaption(item.caption ?? '');
+            setEditTakenYear(
+              item.taken_year != null && !Number.isNaN(item.taken_year) ? String(item.taken_year) : '',
+            );
             setEditFile(null);
             setEditTagIds((item.tagged_people ?? []).map((p) => p.id));
             setEditError(null);
@@ -261,6 +305,16 @@ export function MediaPage() {
               multiline
               minRows={2}
               disabled={editSaving}
+            />
+            <TextField
+              label="Год съёмки"
+              value={editTakenYear}
+              onChange={(e) => setEditTakenYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              fullWidth
+              size="small"
+              disabled={editSaving}
+              placeholder="Оставьте пустым, если неизвестен"
+              slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*' } }}
             />
             <input
               ref={editFileInputRef}

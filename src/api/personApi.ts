@@ -1,18 +1,12 @@
 import { API_BASE } from '../auth/authApi';
 import { getStoredToken } from '../auth/storage';
+import { normalizeGalleryPhoto, type GalleryPhoto } from './galleryPhotoApi';
 
 export interface PersonSummary {
   id: number;
   chart_external_id: string;
   first_name: string;
   last_name: string | null;
-}
-
-export interface TaggedGalleryPhoto {
-  id: number;
-  caption: string | null;
-  image_url: string | null;
-  created_at: string;
 }
 
 export interface PersonDetail {
@@ -35,7 +29,7 @@ export interface PersonDetail {
   parents: PersonSummary[];
   partners: PersonSummary[];
   children: PersonSummary[];
-  tagged_gallery_photos: TaggedGalleryPhoto[];
+  tagged_gallery_photos: GalleryPhoto[];
 }
 
 /** Данные для карты «Места» (метки рождения и смерти). */
@@ -73,6 +67,9 @@ function normalizePersonDetail(raw: PersonDetail): PersonDetail {
     birth_longitude: parseCoord(raw.birth_longitude as unknown),
     death_latitude: parseCoord(raw.death_latitude as unknown),
     death_longitude: parseCoord(raw.death_longitude as unknown),
+    tagged_gallery_photos: Array.isArray(raw.tagged_gallery_photos)
+      ? raw.tagged_gallery_photos.map((gp) => normalizeGalleryPhoto(gp as GalleryPhoto))
+      : [],
   };
 }
 
@@ -122,11 +119,7 @@ export async function fetchPerson(id: string): Promise<PersonDetail> {
   if (!o.person) {
     throw new Error('Не удалось получить персон');
   }
-  const p = normalizePersonDetail(o.person);
-  return {
-    ...p,
-    tagged_gallery_photos: Array.isArray(p.tagged_gallery_photos) ? p.tagged_gallery_photos : [],
-  };
+  return normalizePersonDetail(o.person);
 }
 
 export async function fetchPeopleMapLocations(): Promise<PersonMapLocation[]> {

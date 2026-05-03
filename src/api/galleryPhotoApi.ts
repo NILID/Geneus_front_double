@@ -13,6 +13,8 @@ export interface GalleryPhoto {
   user_id: number;
   uploaded_by_email: string | null;
   caption: string | null;
+  /** Год съёмки, если указан вручную */
+  taken_year: number | null;
   image_url: string | null;
   created_at: string;
   tagged_people: GalleryTaggedPerson[];
@@ -64,9 +66,13 @@ export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
   return list.map(normalizeGalleryPhoto);
 }
 
-function normalizeGalleryPhoto(p: GalleryPhoto): GalleryPhoto {
+export function normalizeGalleryPhoto(p: GalleryPhoto): GalleryPhoto {
+  const ty = p.taken_year;
   return {
     ...p,
+    user_id: typeof p.user_id === 'number' ? p.user_id : 0,
+    uploaded_by_email: p.uploaded_by_email ?? null,
+    taken_year: typeof ty === 'number' && !Number.isNaN(ty) ? ty : null,
     tagged_people: Array.isArray(p.tagged_people) ? p.tagged_people : [],
   };
 }
@@ -75,11 +81,15 @@ export async function uploadGalleryPhoto(
   file: File,
   caption?: string | null,
   personIds?: number[],
+  takenYear?: number | null,
 ): Promise<GalleryPhoto> {
   const fd = new FormData();
   fd.append('gallery_photo[image]', file);
   if (caption != null && caption.trim() !== '') {
     fd.append('gallery_photo[caption]', caption.trim());
+  }
+  if (takenYear != null && !Number.isNaN(takenYear)) {
+    fd.append('gallery_photo[taken_year]', String(takenYear));
   }
   if (personIds !== undefined) {
     for (const id of personIds) {
@@ -106,6 +116,8 @@ export async function uploadGalleryPhoto(
 export interface GalleryPhotoUpdateInput {
   /** Omit to leave caption unchanged. */
   caption?: string | null;
+  /** Omit to leave unchanged; null clears. */
+  taken_year?: number | null;
   /** If set, first step uses multipart/form-data with the new file. */
   image?: File | null;
   /** If set (including []), server replaces tags. Omit to leave tags unchanged. */
@@ -148,6 +160,12 @@ export async function updateGalleryPhoto(
     if (input.caption !== undefined) {
       fd.append('gallery_photo[caption]', input.caption?.trim() ?? '');
     }
+    if (input.taken_year !== undefined) {
+      fd.append(
+        'gallery_photo[taken_year]',
+        input.taken_year == null || Number.isNaN(input.taken_year) ? '' : String(input.taken_year),
+      );
+    }
     fd.append('gallery_photo[image]', input.image!);
     if (input.person_ids !== undefined) {
       for (const pid of input.person_ids) {
@@ -182,6 +200,10 @@ export async function updateGalleryPhoto(
   if (input.caption !== undefined) {
     payload.caption =
       input.caption == null || `${input.caption}`.trim() === '' ? null : input.caption.trim();
+  }
+  if (input.taken_year !== undefined) {
+    payload.taken_year =
+      input.taken_year == null || Number.isNaN(input.taken_year) ? null : input.taken_year;
   }
   if (input.person_ids !== undefined) {
     payload.person_ids = input.person_ids;

@@ -1,9 +1,12 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Fancybox } from '@fancyapps/ui/dist/fancybox/';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import ImageList from '@mui/material/ImageList';
 import ImageListItem from '@mui/material/ImageListItem';
 import ImageListItemBar from '@mui/material/ImageListItemBar';
+import Link from '@mui/material/Link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
@@ -16,6 +19,7 @@ import useFancybox from '../hooks/useFancybox';
 export interface GalleryMasonryItem {
   id: number;
   caption: string | null;
+  taken_year?: number | null;
   image_url: string | null;
   created_at: string;
   uploaded_by_email?: string | null;
@@ -85,27 +89,66 @@ function OwnerPhotoMenu({
   );
 }
 
-function fancyCaptionForItem(item: GalleryMasonryItem): string {
-  const parts: string[] = [
-    item.caption?.trim() ? item.caption : 'Без подписи',
-  ];
-  if (item.uploaded_by_email !== undefined) {
-    parts.push(item.uploaded_by_email ?? 'Неизвестно');
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function personPath(id: number): string {
+  return `/person/${encodeURIComponent(String(id))}`;
+}
+
+function fancyCaptionHtmlForItem(item: GalleryMasonryItem): string {
+  const cap = item.caption?.trim() ? escapeHtml(item.caption) : 'Без подписи';
+  const parts: string[] = [cap];
+  if (item.taken_year != null && !Number.isNaN(item.taken_year)) {
+    parts.push(`Год съёмки: ${escapeHtml(String(item.taken_year))}`);
   }
-  parts.push(new Date(item.created_at).toLocaleString());
+  if (item.uploaded_by_email !== undefined) {
+    parts.push(escapeHtml(item.uploaded_by_email ?? 'Неизвестно'));
+  }
+  parts.push(escapeHtml(new Date(item.created_at).toLocaleString()));
   const tagged = item.tagged_people;
   if (tagged && tagged.length > 0) {
-    parts.push(`На фото: ${tagged.map((p) => personDisplayName(p)).join(', ')}`);
+    const links = tagged
+      .map(
+        (p) =>
+          `<a href="${escapeHtml(personPath(p.id))}">${escapeHtml(personDisplayName(p))}</a>`,
+      )
+      .join(', ');
+    parts.push(`На фото: ${links}`);
   }
   return parts.filter((s) => s !== '').join(' · ');
 }
 
-function subtitleForItem(item: GalleryMasonryItem): string {
-  const tagged = item.tagged_people;
-  if (!tagged?.length) {
-    return '';
+function TaggedPeopleSubtitle({ tagged }: { tagged: GalleryTaggedPerson[] }) {
+  if (tagged.length === 0) {
+    return null;
   }
-  return [`На фото: ${tagged.map((p) => personDisplayName(p)).join(', ')}`].filter((s) => s !== '').join(' · ');
+  return (
+    <Box component="span" sx={{ display: 'block' }}>
+      На фото:{' '}
+      {tagged.map((p, i) => (
+        <React.Fragment key={p.id}>
+          {i > 0 ? ', ' : null}
+          <Link
+            component={RouterLink}
+            to={personPath(p.id)}
+            color="inherit"
+            variant="inherit"
+            underline="hover"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {personDisplayName(p)}
+          </Link>
+        </React.Fragment>
+      ))}
+    </Box>
+  );
 }
 
 export interface GalleryPhotoMasonryProps {
@@ -137,7 +180,31 @@ export function GalleryPhotoMasonry({
   sx,
 }: GalleryPhotoMasonryProps) {
   const reactId = useId();
+  const navigate = useNavigate();
   const [setFancyboxRoot] = useFancybox({});
+
+  useEffect(() => {
+    const onClickCapture = (e: MouseEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) {
+        return;
+      }
+      const a = t.closest('a[href^="/person/"]');
+      if (!(a instanceof HTMLAnchorElement) || !a.closest('.fancybox__dialog')) {
+        return;
+      }
+      const href = a.getAttribute('href');
+      if (!href?.startsWith('/person/')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      void Fancybox.close();
+      navigate(href);
+    };
+    document.addEventListener('click', onClickCapture, true);
+    return () => document.removeEventListener('click', onClickCapture, true);
+  }, [navigate]);
 
   if (photos.length === 0) {
     return null;
@@ -150,9 +217,13 @@ export function GalleryPhotoMasonry({
       {title}
       <ImageList variant="masonry" cols={cols} gap={gap} sx={{ width: '100%', mb: 0 }}>
         {photos.map((item) => {
-          const fancyCaption = fancyCaptionForItem(item);
-          const subtitle = subtitleForItem(item);
+          const fancyCaptionHtml = fancyCaptionHtmlForItem(item);
+          const tagged = item.tagged_people ?? [];
+          const subtitleNode = tagged.length > 0 ? <TaggedPeopleSubtitle tagged={tagged} /> : undefined;
           const isOwner = canManage && item.user_id === currentUserId;
+          const year = item.taken_year != null && !Number.isNaN(item.taken_year) ? item.taken_year : null;
+          const titleText = item.caption?.trim() ? item.caption : 'Без подписи';
+          const barTitle = year != null ? `${titleText} (${year})` : titleText;
 
           return (
             <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
@@ -160,7 +231,7 @@ export function GalleryPhotoMasonry({
                 <a
                   href={item.image_url}
                   data-fancybox={fancyboxGroup}
-                  data-caption={fancyCaption}
+                  data-caption={fancyCaptionHtml}
                   style={{
                     display: 'block',
                     textDecoration: 'none',
@@ -179,8 +250,8 @@ export function GalleryPhotoMasonry({
                 <Box sx={{ minHeight: 120, bgcolor: 'action.hover' }} />
               )}
               <ImageListItemBar
-                title={item.caption?.trim() ? item.caption : 'Без подписи'}
-                subtitle={subtitle || undefined}
+                title={barTitle}
+                subtitle={subtitleNode}
                 position="bottom"
                 actionIcon={
                   isOwner ? (
