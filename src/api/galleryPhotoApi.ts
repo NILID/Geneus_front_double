@@ -1,5 +1,11 @@
 import { API_BASE } from '../auth/authApi';
 import { getStoredToken } from '../auth/storage';
+import { MAX_COMMENT_BODY } from './ideaApi';
+import type { IdeaComment } from './ideaApi';
+
+export type GalleryPhotoComment = IdeaComment;
+
+export { MAX_COMMENT_BODY };
 
 export interface GalleryTaggedPerson {
   id: number;
@@ -18,6 +24,7 @@ export interface GalleryPhoto {
   image_url: string | null;
   created_at: string;
   tagged_people: GalleryTaggedPerson[];
+  comments_count: number;
 }
 
 function authHeaders(jsonBody: boolean): Headers {
@@ -68,12 +75,14 @@ export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
 
 export function normalizeGalleryPhoto(p: GalleryPhoto): GalleryPhoto {
   const ty = p.taken_year;
+  const cc = p.comments_count;
   return {
     ...p,
     user_id: typeof p.user_id === 'number' ? p.user_id : 0,
     uploaded_by_email: p.uploaded_by_email ?? null,
     taken_year: typeof ty === 'number' && !Number.isNaN(ty) ? ty : null,
     tagged_people: Array.isArray(p.tagged_people) ? p.tagged_people : [],
+    comments_count: typeof cc === 'number' && !Number.isNaN(cc) ? cc : 0,
   };
 }
 
@@ -226,4 +235,55 @@ export async function deleteGalleryPhoto(id: number): Promise<void> {
   if (!res.ok && res.status !== 204) {
     throw new Error(await parseErrorMessage(res));
   }
+}
+
+function normalizeGalleryPhotoComment(raw: unknown): GalleryPhotoComment {
+  const o = raw as Record<string, unknown>;
+  return {
+    id: Number(o.id),
+    user_id: Number(o.user_id),
+    author_email: typeof o.author_email === 'string' ? o.author_email : null,
+    body: typeof o.body === 'string' ? o.body : '',
+    created_at: typeof o.created_at === 'string' ? o.created_at : '',
+  };
+}
+
+export async function fetchGalleryPhotoComments(photoId: number): Promise<GalleryPhotoComment[]> {
+  const res = await fetch(`${API_BASE}/api/v1/gallery_photos/${photoId}/comments`, {
+    headers: authHeaders(false),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+  const json: unknown = await res.json();
+  const list = (json as { comments?: unknown[] }).comments;
+  if (!Array.isArray(list)) {
+    throw new Error('Некорректный ответ сервера');
+  }
+  return list.map(normalizeGalleryPhotoComment);
+}
+
+export async function createGalleryPhotoComment(
+  photoId: number,
+  body: string,
+): Promise<{ comment: GalleryPhotoComment; comments_count: number }> {
+  const res = await fetch(`${API_BASE}/api/v1/gallery_photos/${photoId}/comments`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ comment: { body } }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+  const json: unknown = await res.json();
+  const o = json as Record<string, unknown>;
+  const comment = o.comment;
+  const commentsCount = o.comments_count;
+  if (!comment || typeof comment !== 'object') {
+    throw new Error('Некорректный ответ сервера');
+  }
+  if (typeof commentsCount !== 'number' || Number.isNaN(commentsCount)) {
+    throw new Error('Некорректный ответ сервера');
+  }
+  return { comment: normalizeGalleryPhotoComment(comment), comments_count: commentsCount };
 }

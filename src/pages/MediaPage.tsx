@@ -354,6 +354,11 @@ export function MediaPage() {
           sx={{ width: '100%' }}
           menuIdPrefix="media-gallery-photo"
           currentUserId={user?.id}
+          onGalleryPhotoCommentsCountChange={(photoId, commentsCount) => {
+            setPhotos((prev) =>
+              prev.map((p) => (p.id === photoId ? { ...p, comments_count: commentsCount } : p)),
+            );
+          }}
           onEdit={(item) => {
             setEditPhoto(item as GalleryPhoto);
             setEditCaption(item.caption ?? '');

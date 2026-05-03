@@ -22,6 +22,7 @@ import {
   type PersonDetail,
   type PersonSummary,
 } from '../api/personApi';
+import { useAuth } from '../auth/AuthContext';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
 import { SessionLoading } from '../components/SessionLoading';
 
@@ -77,6 +78,7 @@ function FactRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function PersonPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,6 +217,20 @@ export function PersonPage() {
           gap={10}
           sx={{ mt: 3, width: '100%' }}
           menuIdPrefix={`person-${person.id}-gallery-photo`}
+          currentUserId={user?.id}
+          onGalleryPhotoCommentsCountChange={(photoId, commentsCount) => {
+            setPerson((prev) => {
+              if (!prev) {
+                return prev;
+              }
+              return {
+                ...prev,
+                tagged_gallery_photos: prev.tagged_gallery_photos.map((p) =>
+                  p.id === photoId ? { ...p, comments_count: commentsCount } : p,
+                ),
+              };
+            });
+          }}
           title={
             <Typography variant="h2" component="h2" gutterBottom>
               Фотографии, где отмечена эта персона
