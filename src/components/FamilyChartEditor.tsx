@@ -146,6 +146,7 @@ export function FamilyChartEditor({
     el.innerHTML = '';
 
     const chart = f3.createChart(el, data);
+    chart.setSingleParentEmptyCard(true, { label: 'Добавить' });
     const card = chart.setCardHtml();
     card.setCardDisplay(cardDisplay);
     /** HTML cards default `mini_tree: false`; enable like SVG example — icon when `!all_rels_displayed`. */
