@@ -11,16 +11,18 @@ import CardMedia from '@mui/material/CardMedia';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { sendInvitationRequest } from '../auth/authApi';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { createInvitationLinkRequest, sendInvitationRequest } from '../auth/authApi';
 import { fetchGalleryPhotos, type GalleryPhoto } from '../api/galleryPhotoApi';
 import { fetchIdeas, type Idea } from '../api/ideaApi';
 import {
@@ -32,6 +34,9 @@ import {
 const HOME_PHOTO_LIMIT = 8;
 const HOME_IDEA_LIMIT = 6;
 
+const INVITE_TAB_EMAIL = 0;
+const INVITE_TAB_LINK = 1;
+
 function formatRuDate(iso: string): string {
   try {
     const d = new Date(iso);
@@ -42,6 +47,24 @@ function formatRuDate(iso: string): string {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function formatRuDateTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+      return '';
+    }
+    return d.toLocaleString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return '';
@@ -87,10 +110,20 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteTab, setInviteTab] = useState(INVITE_TAB_EMAIL);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteSnackbar, setInviteSnackbar] = useState<string | null>(null);
+
+  const [inviteLinkEmail, setInviteLinkEmail] = useState('');
+  const [inviteLinkError, setInviteLinkError] = useState<string | null>(null);
+  const [inviteLinkBusy, setInviteLinkBusy] = useState(false);
+  const [inviteLinkPayload, setInviteLinkPayload] = useState<{
+    invitation_text: string;
+    invitation_url: string;
+    invitation_expires_at?: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -115,19 +148,73 @@ export function HomePage() {
     void load();
   }, [load]);
 
+  const inviteDialogBusy = inviteBusy || inviteLinkBusy;
+
+  function openInviteDialog() {
+    setInviteTab(INVITE_TAB_EMAIL);
+    setInviteError(null);
+    setInviteLinkError(null);
+    setInviteLinkPayload(null);
+    setInviteEmail('');
+    setInviteLinkEmail('');
+    setInviteOpen(true);
+  }
+
+  function closeInviteDialog() {
+    if (inviteDialogBusy) {
+      return;
+    }
+    setInviteOpen(false);
+    setInviteTab(INVITE_TAB_EMAIL);
+    setInviteEmail('');
+    setInviteError(null);
+    setInviteLinkEmail('');
+    setInviteLinkError(null);
+    setInviteLinkPayload(null);
+  }
+
   async function onInviteSubmit(e: React.FormEvent) {
     e.preventDefault();
     setInviteError(null);
     setInviteBusy(true);
     try {
       await sendInvitationRequest(inviteEmail);
-      setInviteOpen(false);
-      setInviteEmail('');
+      closeInviteDialog();
       setInviteSnackbar('Приглашение отправлено на указанный email');
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : 'Не удалось отправить приглашение');
     } finally {
       setInviteBusy(false);
+    }
+  }
+
+  async function onInviteLinkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setInviteLinkError(null);
+    setInviteLinkBusy(true);
+    try {
+      const payload = await createInvitationLinkRequest(inviteLinkEmail);
+      setInviteLinkPayload({
+        invitation_text: payload.invitation_text,
+        invitation_url: payload.invitation_url,
+        invitation_expires_at: payload.invitation_expires_at,
+      });
+      setInviteSnackbar('Текст приглашения сгенерирован');
+    } catch (err) {
+      setInviteLinkError(
+        err instanceof Error ? err.message : 'Не удалось создать приглашение',
+      );
+    } finally {
+      setInviteLinkBusy(false);
+    }
+  }
+
+  async function copyToClipboard(text: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setInviteSnackbar(successMessage);
+    } catch {
+      setInviteSnackbar('Не удалось скопировать — выделите текст вручную');
     }
   }
 
@@ -209,10 +296,7 @@ export function HomePage() {
                 variant="outlined"
                 size="large"
                 color="inherit"
-                onClick={() => {
-                  setInviteError(null);
-                  setInviteOpen(true);
-                }}
+                onClick={openInviteDialog}
               >
                 Пригласить
               </Button>
@@ -221,11 +305,35 @@ export function HomePage() {
         </Container>
       </Box>
 
-      <Dialog open={inviteOpen} onClose={() => !inviteBusy && setInviteOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Пригласить пользователя</DialogTitle>
-        <Box component="form" onSubmit={onInviteSubmit}>
-          <DialogContent>
-            <Stack spacing={2}>
+      <Dialog
+        open={inviteOpen}
+        onClose={() => {
+          if (inviteDialogBusy) {
+            return;
+          }
+          closeInviteDialog();
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Пригласить</DialogTitle>
+        <Tabs
+          value={inviteTab}
+          onChange={(_, v) => {
+            setInviteTab(v);
+            setInviteError(null);
+            setInviteLinkError(null);
+          }}
+          variant="fullWidth"
+          sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="По email" />
+          <Tab label="Ссылка для копирования" />
+        </Tabs>
+
+        <DialogContent sx={{ pt: 2 }}>
+          {inviteTab === INVITE_TAB_EMAIL && (
+            <Stack spacing={2} component="form" onSubmit={onInviteSubmit}>
               <Typography variant="body2" color="text.secondary">
                 На указанный адрес уйдёт письмо со ссылкой для регистрации.
               </Typography>
@@ -244,17 +352,109 @@ export function HomePage() {
                   {inviteError}
                 </Alert>
               )}
+              <Stack direction="row" spacing={1} sx={{ pt: 1, justifyContent: 'flex-end' }}>
+                <Button type="button" onClick={closeInviteDialog} disabled={inviteBusy}>
+                  Отмена
+                </Button>
+                <Button type="submit" variant="contained" disabled={inviteBusy}>
+                  {inviteBusy ? 'Отправка…' : 'Отправить'}
+                </Button>
+              </Stack>
             </Stack>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button type="button" onClick={() => setInviteOpen(false)} disabled={inviteBusy}>
-              Отмена
-            </Button>
-            <Button type="submit" variant="contained" disabled={inviteBusy}>
-              {inviteBusy ? 'Отправка…' : 'Отправить'}
-            </Button>
-          </DialogActions>
-        </Box>
+          )}
+
+          {inviteTab === INVITE_TAB_LINK && (
+            <Stack spacing={2} component="form" onSubmit={onInviteLinkSubmit}>
+              <Typography variant="body2" color="text.secondary">
+                Укажите email гостя: будет создано приглашение без письма. Скопируйте текст или ссылку и
+                отправьте сами (мессенджер, другой почтовый ящик и т.д.).
+              </Typography>
+              {!inviteLinkPayload ? (
+                <TextField
+                  label="Email гостя"
+                  type="email"
+                  autoComplete="email"
+                  value={inviteLinkEmail}
+                  onChange={(ev) => setInviteLinkEmail(ev.target.value)}
+                  required
+                  fullWidth
+                  autoFocus
+                />
+              ) : (
+                <>
+                  {inviteLinkPayload.invitation_expires_at ? (
+                    <Alert severity="info" icon={false}>
+                      Ссылка действует до{' '}
+                      {formatRuDateTime(inviteLinkPayload.invitation_expires_at)} (время сервера).
+                    </Alert>
+                  ) : null}
+                  <TextField
+                    label="Полный текст"
+                    value={inviteLinkPayload.invitation_text}
+                    fullWidth
+                    multiline
+                    minRows={8}
+                    slotProps={{ htmlInput: { readOnly: true } }}
+                  />
+                  <TextField
+                    label="Только ссылка"
+                    value={inviteLinkPayload.invitation_url}
+                    fullWidth
+                    slotProps={{ htmlInput: { readOnly: true } }}
+                  />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      startIcon={<ContentCopyIcon />}
+                      onClick={() =>
+                        void copyToClipboard(inviteLinkPayload.invitation_text, 'Текст скопирован')
+                      }
+                    >
+                      Копировать текст
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      startIcon={<ContentCopyIcon />}
+                      onClick={() =>
+                        void copyToClipboard(inviteLinkPayload.invitation_url, 'Ссылка скопирована')
+                      }
+                    >
+                      Копировать ссылку
+                    </Button>
+                  </Stack>
+                </>
+              )}
+              {inviteLinkError && (
+                <Alert severity="error" onClose={() => setInviteLinkError(null)}>
+                  {inviteLinkError}
+                </Alert>
+              )}
+              <Stack direction="row" spacing={1} sx={{ pt: 1, justifyContent: 'flex-end' }}>
+                <Button type="button" onClick={closeInviteDialog} disabled={inviteLinkBusy}>
+                  {inviteLinkPayload ? 'Закрыть' : 'Отмена'}
+                </Button>
+                {!inviteLinkPayload ? (
+                  <Button type="submit" variant="contained" disabled={inviteLinkBusy}>
+                    {inviteLinkBusy ? 'Создание…' : 'Создать ссылку'}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() => {
+                      setInviteLinkPayload(null);
+                      setInviteLinkEmail('');
+                    }}
+                  >
+                    Другой email
+                  </Button>
+                )}
+              </Stack>
+            </Stack>
+          )}
+        </DialogContent>
       </Dialog>
 
       <Snackbar

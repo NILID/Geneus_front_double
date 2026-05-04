@@ -74,26 +74,18 @@ export function LoginPage() {
             </Button>
           </Stack>
         </Box>
-        <Box
-          sx={{
-            mt: 3,
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Link component={RouterLink} to="/register" variant="body2">
-            Создать аккаунт
-          </Link>
-          <Typography variant="body2" color="text.secondary">
-            ·
+        <Stack spacing={1.5} sx={{ mt: 3, alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+            Новый аккаунт — только по приглашению. Если вам уже отправили ссылку, откройте{' '}
+            <Link component={RouterLink} to="/accept-invitation">
+              страницу приглашения
+            </Link>
+            .
           </Typography>
           <Link component={RouterLink} to="/forgot-password" variant="body2">
             Забыли пароль?
           </Link>
-        </Box>
+        </Stack>
       </Paper>
     </Container>
   );

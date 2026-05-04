@@ -11,7 +11,6 @@ import {
   fetchCurrentUser,
   loginRequest,
   logoutRequest,
-  registerRequest,
 } from './authApi';
 import { getStoredToken } from './storage';
 
@@ -23,7 +22,6 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
@@ -82,15 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }, []);
 
-  const register = useCallback(
-    async (email: string, password: string, passwordConfirmation: string) => {
-      setError(null);
-      const u = await registerRequest(email, password, passwordConfirmation);
-      setUser(u);
-    },
-    [],
-  );
-
   const logout = useCallback(async () => {
     setError(null);
     try {
@@ -108,12 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       login,
-      register,
       logout,
       refreshUser,
       clearError,
     }),
-    [user, loading, error, login, register, logout, refreshUser, clearError],
+    [user, loading, error, login, logout, refreshUser, clearError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

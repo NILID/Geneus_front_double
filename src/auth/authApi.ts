@@ -76,30 +76,6 @@ export async function loginRequest(email: string, password: string): Promise<Aut
   return parseAuthUserPayload(data);
 }
 
-export async function registerRequest(
-  email: string,
-  password: string,
-  passwordConfirmation: string,
-): Promise<AuthUser> {
-  const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
-    method: 'POST',
-    headers: buildHeaders(true, false),
-    body: JSON.stringify({
-      user: { email, password, password_confirmation: passwordConfirmation },
-    }),
-  });
-  const token = readBearerFromResponse(res);
-  if (!res.ok) {
-    throw new Error(await parseErrorMessage(res));
-  }
-  if (!token) {
-    throw new Error('Registration succeeded but no JWT was returned.');
-  }
-  setStoredToken(token);
-  const data: unknown = await res.json();
-  return parseAuthUserPayload(data);
-}
-
 export async function logoutRequest(): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/auth/logout`, {
     method: 'DELETE',
@@ -182,6 +158,38 @@ export async function sendInvitationRequest(email: string): Promise<void> {
   if (!res.ok) {
     throw new Error(await parseErrorMessage(res));
   }
+}
+
+export interface InvitationLinkPayload {
+  email: string;
+  invitation_url: string;
+  invitation_text: string;
+  /** ISO8601, если на сервере задан срок действия приглашения */
+  invitation_expires_at?: string;
+}
+
+export async function createInvitationLinkRequest(email: string): Promise<InvitationLinkPayload> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/invitations/link`, {
+    method: 'POST',
+    headers: buildHeaders(true, true),
+    body: JSON.stringify({ user: { email: email.trim() } }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+  const data: unknown = await res.json();
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid invitation link payload');
+  }
+  const o = data as Record<string, unknown>;
+  const exp = o.invitation_expires_at;
+  return {
+    email: String(o.email),
+    invitation_url: String(o.invitation_url),
+    invitation_text: String(o.invitation_text),
+    invitation_expires_at:
+      exp !== null && exp !== undefined && String(exp).length > 0 ? String(exp) : undefined,
+  };
 }
 
 export async function acceptInvitationRequest(

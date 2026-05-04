@@ -13,7 +13,6 @@ import { PersonFactsPage } from './pages/PersonFactsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { AcceptInvitationPage } from './pages/AcceptInvitationPage';
 import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { MediaPage } from './pages/MediaPage';
 import { MapPage } from './pages/MapPage';
@@ -46,11 +45,7 @@ function AppRoutes() {
       />
       <Route
         path="/register"
-        element={
-          <PublicOnlyRoute>
-            <RegisterPage />
-          </PublicOnlyRoute>
-        }
+        element={<Navigate to="/login" replace />}
       />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
