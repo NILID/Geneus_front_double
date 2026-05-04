@@ -1,1 +1,43 @@
 /* family-chart renders SVG/HTML inside .f3 — keep minimal layout hooks only */
+
+.f3 a.f3-person-profile-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.f3 a.f3-person-profile-bar:hover {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.f3 a.f3-person-profile-bar:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: -2px;
+}
+
+.f3 .f3-person-profile-bar__label {
+  pointer-events: none;
+}
+
+/* Reserve space so the bottom bar does not cover name / dates */
+.f3 div.card:has(> a.f3-person-profile-bar) .card-inner {
+  padding-bottom: 36px;
+}

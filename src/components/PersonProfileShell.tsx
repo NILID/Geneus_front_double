@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import AccountTree from '@mui/icons-material/AccountTree';
 import MuiAvatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -29,12 +30,15 @@ export function PersonProfileShell({
   personId,
   activeTab,
   breadcrumbs,
+  familyTreeTo,
   children,
 }: {
   person: PersonDetail;
   personId: string;
   activeTab: PersonProfileTab;
   breadcrumbs: React.ReactNode;
+  /** Ссылка на древо с корнем в этой персоне (`/tree?...`). */
+  familyTreeTo?: string;
   children: React.ReactNode;
 }) {
   const base = `/person/${encodeURIComponent(personId)}`;
@@ -123,8 +127,21 @@ export function PersonProfileShell({
                   width: { xs: '100%', sm: 'auto' },
                   justifyContent: { xs: 'center', sm: 'flex-end' },
                   flexShrink: 0,
+                  flexWrap: 'wrap',
                 }}
               >
+                {familyTreeTo ? (
+                  <Button
+                    component={RouterLink}
+                    to={familyTreeTo}
+                    variant="outlined"
+                    size="medium"
+                    aria-label="К древу"
+                    sx={{ textTransform: 'none', fontWeight: 600, minWidth: 40, px: 1 }}
+                  >
+                    <AccountTree fontSize="small" />
+                  </Button>
+                ) : null}
                 <Button
                   component={RouterLink}
                   to={`${base}/edit`}

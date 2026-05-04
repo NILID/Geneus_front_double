@@ -7,6 +7,7 @@
     "@emotion/styled": "^11.14.1",
     "@fancyapps/ui": "^6.1.14",
     "@fontsource/roboto": "^5.2.10",
+    "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

@@ -30,6 +30,7 @@ import { AddPersonFactForm, PersonFactsPeekList } from '../components/PersonFact
 import { PersonProfileShell } from '../components/PersonProfileShell';
 import { SessionLoading } from '../components/SessionLoading';
 import { formatPersonGenealogyDate } from '../lib/genealogyDateFormat';
+import { buildFamilyTreeHref } from '../lib/familyChartNavigation';
 
 function ProfileSectionCard({
   title,
@@ -255,7 +256,13 @@ export function PersonPage() {
   );
 
   return (
-    <PersonProfileShell person={person} personId={id} activeTab="overview" breadcrumbs={breadcrumbs}>
+    <PersonProfileShell
+      person={person}
+      personId={id}
+      activeTab="overview"
+      breadcrumbs={breadcrumbs}
+      familyTreeTo={buildFamilyTreeHref(person)}
+    >
       <>
       <Box
         sx={{

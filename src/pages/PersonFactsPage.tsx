@@ -12,6 +12,7 @@ import { fetchPersonFacts, type PersonFact } from '../api/personFactsApi';
 import { AddPersonFactForm, PersonFactsList } from '../components/PersonFactsWidgets';
 import { PersonProfileShell } from '../components/PersonProfileShell';
 import { SessionLoading } from '../components/SessionLoading';
+import { buildFamilyTreeHref } from '../lib/familyChartNavigation';
 
 export function PersonFactsPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,7 +93,13 @@ export function PersonFactsPage() {
   );
 
   return (
-    <PersonProfileShell person={person} personId={id} activeTab="facts" breadcrumbs={breadcrumbs}>
+    <PersonProfileShell
+      person={person}
+      personId={id}
+      activeTab="facts"
+      breadcrumbs={breadcrumbs}
+      familyTreeTo={buildFamilyTreeHref(person)}
+    >
       <Paper
         elevation={0}
         sx={{

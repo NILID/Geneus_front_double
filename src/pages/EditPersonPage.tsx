@@ -29,6 +29,7 @@ import { PlaceAutocomplete } from '../components/PlaceAutocomplete';
 import { SettlementMapPicker } from '../components/SettlementMapPicker';
 import type { PlaceSuggestion } from '../lib/osmGeocode';
 import { extractGenealogyYear } from '../lib/genealogyDateFormat';
+import { buildFamilyTreeHref } from '../lib/familyChartNavigation';
 import { resolvePlaceCoordinates } from '../lib/osmGeocode';
 import { SessionLoading } from '../components/SessionLoading';
 
@@ -331,7 +332,13 @@ export function EditPersonPage() {
   );
 
   return (
-    <PersonProfileShell person={profileForShell} personId={id} activeTab="edit" breadcrumbs={breadcrumbs}>
+    <PersonProfileShell
+      person={profileForShell}
+      personId={id}
+      activeTab="edit"
+      breadcrumbs={breadcrumbs}
+      familyTreeTo={buildFamilyTreeHref(profileForShell)}
+    >
       <Paper
         elevation={0}
         sx={{

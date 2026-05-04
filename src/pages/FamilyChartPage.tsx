@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -13,8 +13,13 @@ import Typography from '@mui/material/Typography';
 import { FamilyChartEditor } from '../components/FamilyChartEditor';
 import { SessionLoading } from '../components/SessionLoading';
 import { fetchFamilyChart, type FamilyChartData } from '../familyChartApi';
+import { pickDefaultMainNodeId, resolveFamilyTreeMainNode } from '../lib/familyChartNavigation';
 
 export function FamilyChartPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mainParam = searchParams.get('main');
+  const personParam = searchParams.get('person');
   const [treeData, setTreeData] = useState<FamilyChartData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +65,14 @@ export function FamilyChartPage() {
     };
   }, []);
 
+  const { treeMainNodeId, missingPersonInTree } = useMemo(() => {
+    if (!treeData?.length) {
+      return { treeMainNodeId: pickDefaultMainNodeId([]), missingPersonInTree: false };
+    }
+    const r = resolveFamilyTreeMainNode(treeData, mainParam, personParam);
+    return { treeMainNodeId: r.mainNodeId, missingPersonInTree: r.missingPersonInTree };
+  }, [treeData, mainParam, personParam]);
+
   return (
     <Container maxWidth={false} sx={{ py: 2, px: { xs: 1, sm: 2 } }}>
       <Stack spacing={2}>
@@ -102,10 +115,17 @@ export function FamilyChartPage() {
           </Alert>
         )}
 
+        {missingPersonInTree && personParam != null && (
+          <Alert severity="info" role="status">
+            Эта персона ещё не попала в граф древа — показано древо с корнем по умолчанию.
+          </Alert>
+        )}
+
         {treeData && (
           <FamilyChartEditor
             data={treeData}
             remountKey={chartGeneration}
+            mainNodeId={treeMainNodeId}
             onDataChange={setTreeData}
             onPersistedData={handlePersistedData}
             onUpdate={(data) => appendLog(`Изменения (${data.length} человек в древе)`)}
@@ -115,6 +135,9 @@ export function FamilyChartPage() {
             onRemove={(data, ids) =>
               appendLog(`Удалены [${ids.join(', ')}] → всего ${data.length} человек`)
             }
+            onOpenPersonPage={(personId) => {
+              void navigate(`/person/${encodeURIComponent(personId)}`);
+            }}
           />
         )}
 

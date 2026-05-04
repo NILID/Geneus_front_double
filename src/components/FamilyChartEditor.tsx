@@ -31,6 +31,13 @@ export type FamilyChartEditorProps = {
   editFields?: Array<string | { type: string; id: string; label: string }>;
   /** Bump to destroy and recreate the chart (e.g. after a server refetch). */
   remountKey?: string | number;
+  /**
+   * When set, each person card gets a full-width bottom bar (family-chart `setOnCardUpdate`).
+   * Clicks use SPA navigation; modifier-clicks keep default browser behavior.
+   */
+  onOpenPersonPage?: (personId: string) => void;
+  /** Chart node `id` passed to {@link https://github.com/donatso/family-chart `updateMainId`} (корень древа). */
+  mainNodeId: string;
 } & FamilyChartEditCallbacks;
 
 /** Matches `family-chart` `setCardDisplay`: field groups, field names, or formatters. */
@@ -56,15 +63,19 @@ export function FamilyChartEditor({
   cardDisplay = DEFAULT_CARD_DISPLAY,
   editFields = DEFAULT_EDIT_FIELDS,
   remountKey = 0,
+  onOpenPersonPage,
+  mainNodeId,
 }: FamilyChartEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<
     | {
         updateData: (d: FamilyChartData) => unknown;
         updateTree: (p: { initial?: boolean; tree_position?: string }) => unknown;
+        updateMainId: (id: string) => unknown;
       }
     | undefined
   >(undefined);
+  const appliedMainNodeIdRef = useRef<string | null>(null);
   const editTreeRef = useRef<{ exportData: () => unknown; destroy: () => unknown } | null>(null);
   const lastExportRef = useRef<FamilyChartData | null>(null);
   const removedIdsRef = useRef<Set<string>>(new Set());
@@ -74,6 +85,10 @@ export function FamilyChartEditor({
   const pendingSaveRef = useRef(false);
   const callbacksRef = useRef({ onDataChange, onPersistedData, onUpdate, onAdd, onRemove });
   callbacksRef.current = { onDataChange, onPersistedData, onUpdate, onAdd, onRemove };
+  const onOpenPersonPageRef = useRef(onOpenPersonPage);
+  onOpenPersonPageRef.current = onOpenPersonPage;
+  const mainNodeIdRef = useRef(mainNodeId);
+  mainNodeIdRef.current = mainNodeId;
 
   const createdForKeyRef = useRef<string | number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -131,6 +146,46 @@ export function FamilyChartEditor({
     const card = chart.setCardHtml();
     card.setCardDisplay(cardDisplay);
 
+    card.setOnCardUpdate(function (this: HTMLElement, d: { data: Record<string, unknown> & { id?: string; to_add?: unknown; unknown?: unknown; _new_rel_data?: unknown } }) {
+      const cardEl = this.querySelector('.card');
+      if (!cardEl) {
+        return;
+      }
+      cardEl.querySelectorAll('.f3-person-profile-bar').forEach((n) => n.remove());
+
+      const open = onOpenPersonPageRef.current;
+      if (!open) {
+        return;
+      }
+
+      const node = d.data;
+      if (node.to_add || node.unknown || node._new_rel_data) {
+        return;
+      }
+
+      const rawId = node.person_id ?? node.id;
+      if (rawId === undefined || rawId === null || rawId === '') {
+        return;
+      }
+      const personId = String(rawId);
+
+      const a = document.createElement('a');
+      a.className = 'f3-person-profile-bar';
+      a.href = `/person/${encodeURIComponent(personId)}`;
+      a.setAttribute('aria-label', 'Открыть страницу персоны');
+      a.title = 'Страница персоны';
+      a.innerHTML = '<span class="f3-person-profile-bar__label">Профиль</span>';
+      a.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+          return;
+        }
+        e.preventDefault();
+        onOpenPersonPageRef.current?.(personId);
+      });
+      cardEl.appendChild(a);
+    });
+
     const editTree = chart
       .editTree()
       .setAddRelLabels(
@@ -175,10 +230,9 @@ export function FamilyChartEditor({
 
     const stopRussianUi = observeRussianFamilyChartUi(el);
 
-    chart
-      .updateMainId('1')
-      .updateTree({ initial: true });
-    
+    chart.updateMainId(mainNodeIdRef.current).updateTree({ initial: true });
+    appliedMainNodeIdRef.current = mainNodeIdRef.current;
+
     internalChangeRef.current = true;
 
     return () => {
@@ -191,8 +245,22 @@ export function FamilyChartEditor({
       removedIdsRef.current = new Set();
       pendingSaveRef.current = false;
       createdForKeyRef.current = null;
+      appliedMainNodeIdRef.current = null;
     };
+    // mainNodeIdRef всегда актуален; смена только корня без пересоздания графа — отдельный эффект ниже.
   }, [data, remountKey, cardDisplay, editFields, persistLatestTree]);
+
+  useEffect(() => {
+    if (!chartRef.current) {
+      return;
+    }
+    if (appliedMainNodeIdRef.current === mainNodeId) {
+      return;
+    }
+    appliedMainNodeIdRef.current = mainNodeId;
+    chartRef.current.updateMainId(mainNodeId);
+    chartRef.current.updateTree({ tree_position: 'main_to_middle' });
+  }, [mainNodeId]);
 
   useEffect(() => {
     if (!data || !chartRef.current) {
