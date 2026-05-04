@@ -52,6 +52,9 @@ const DEFAULT_EDIT_FIELDS = RUSSIAN_EDIT_FIELDS;
 /**
  * Interactive tree using `family-chart` EditTree (same flow as docs example “17-edit-tree”):
  * {@link https://donatso.github.io/family-chart-doc/examples/v2/17-edit-tree}
+ *
+ * “Mini tree” on cards (branch available / relatives not all on canvas) matches SVG cards example:
+ * {@link https://donatso.github.io/family-chart-doc/examples/v2/7-svg-cards-edit}
  */
 export function FamilyChartEditor({
   data,
@@ -145,6 +148,8 @@ export function FamilyChartEditor({
     const chart = f3.createChart(el, data);
     const card = chart.setCardHtml();
     card.setCardDisplay(cardDisplay);
+    /** HTML cards default `mini_tree: false`; enable like SVG example — icon when `!all_rels_displayed`. */
+    card.setMiniTree(true);
 
     card.setOnCardUpdate(function (this: HTMLElement, d: { data: Record<string, unknown> & { id?: string; to_add?: unknown; unknown?: unknown; _new_rel_data?: unknown } }) {
       const cardEl = this.querySelector('.card');
