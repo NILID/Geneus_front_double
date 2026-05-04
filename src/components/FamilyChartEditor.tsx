@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import { saveFamilyTree, type FamilyChartData } from '../familyChartApi';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
 import { RUSSIAN_EDIT_FIELDS, observeRussianFamilyChartUi } from '../familyChartEdit/familyChartRussianUi';
-import { formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
+import { formatFamilyChartPersonNameLine, formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
 
 export type FamilyChartEditCallbacks = {
   /** Fires after any edit/add/remove that updates the library store (full snapshot). */
@@ -40,7 +40,7 @@ export type FamilyChartEditorProps = {
 type CardDisplayConfig = Array<string[] | string | ((d: { data: Record<string, unknown> }) => string)>;
 
 const DEFAULT_CARD_DISPLAY: CardDisplayConfig = [
-  ['first name', 'last name'],
+  (d) => formatFamilyChartPersonNameLine(d),
   (d) => formatFamilyChartYearLine(d.data as Record<string, unknown>),
 ];
 const DEFAULT_EDIT_FIELDS = RUSSIAN_EDIT_FIELDS;
@@ -295,6 +295,8 @@ export function FamilyChartEditor({
         height: { xs: 560, sm: 720, md: 900 },
         maxWidth: '100%',
         mx: 'auto',
+        // family-chart: скрыть «Удалить связь» в форме карточки (режим remove-relative путает и обходит явное сохранение).
+        '& .f3-remove-relative-btn': { display: 'none' },
       }}
     />
   );

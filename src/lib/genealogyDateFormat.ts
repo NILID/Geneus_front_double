@@ -46,6 +46,28 @@ export function formatFamilyChartYearLine(data: Record<string, unknown>): string
   return '';
 }
 
+const UNKNOWN_NAME = /^unknown$/i;
+
+/**
+ * Строка имени на карточке family-chart: пустые поля и плейсхолдеры вроде «Unknown» → «Неизвестно».
+ * `chartNode` — тот же объект, что передаёт `setCardDisplay` в функции-форматтеры (`d` с полем `data`).
+ */
+export function formatFamilyChartPersonNameLine(chartNode: { data?: Record<string, unknown> }): string {
+  const person = chartNode.data ?? {};
+  const firstRaw = typeof person['first name'] === 'string' ? person['first name'].trim() : '';
+  const lastRaw = typeof person['last name'] === 'string' ? person['last name'].trim() : '';
+
+  const isBlankOrUnknown = (s: string) => s === '' || UNKNOWN_NAME.test(s);
+  if (isBlankOrUnknown(firstRaw) && isBlankOrUnknown(lastRaw)) {
+    return 'Неизвестно';
+  }
+
+  const first = isBlankOrUnknown(firstRaw) ? '' : firstRaw;
+  const last = isBlankOrUnknown(lastRaw) ? '' : lastRaw;
+  const line = [first, last].filter(Boolean).join(' ').trim();
+  return line || 'Неизвестно';
+}
+
 /** Genitive month names for dates like "7 августа 1984". */
 const RU_MONTHS_GEN = [
   'января',
