@@ -1,3 +1,4 @@
+import { API_BASE } from './auth/authApi';
 import { getStoredToken } from './auth/storage';
 import { formatFamilyChartYearLine } from './lib/genealogyDateFormat';
 
@@ -27,10 +28,52 @@ export interface UpdateTreePayload {
   removed_ids: string[];
 }
 
-/** Dev server proxies this to http://127.0.0.1:3001 (see package.json). Override with REACT_APP_FAMILY_CHART_URL. */
-export const FAMILY_CHART_URL =
-  process.env.REACT_APP_FAMILY_CHART_URL ?? '/people/family_chart';
-export const UPDATE_TREE_URL = process.env.REACT_APP_UPDATE_TREE_URL ?? '/people/update_tree';
+function defaultTreeUrl(service: 'family_chart' | 'update_tree'): string {
+  const base = API_BASE.replace(/\/$/, '');
+  return `${base}/api/v1/people/${service}`;
+}
+
+/** До миграции в API запросы шли на `/people/...` — подменяем, если env или закэшированная сборка ещё такие. */
+function coerceLegacyTreeUrl(url: string, service: 'family_chart' | 'update_tree'): string {
+  const legacyPath = `/people/${service}`;
+  const modernPath = `/api/v1/people/${service}`;
+  if (url.includes(modernPath)) {
+    return url;
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      const u = new URL(url);
+      if (u.pathname === legacyPath) {
+        u.pathname = modernPath;
+        return u.toString();
+      }
+    } catch {
+      /* ignore */
+    }
+    return url;
+  }
+  if (url === legacyPath || url.startsWith(`${legacyPath}?`)) {
+    return url.replace(legacyPath, modernPath);
+  }
+  return url;
+}
+
+function envOrDefaultTreeUrl(envKey: 'REACT_APP_FAMILY_CHART_URL' | 'REACT_APP_UPDATE_TREE_URL', service: 'family_chart' | 'update_tree'): string {
+  const raw = process.env[envKey];
+  const fallback = defaultTreeUrl(service);
+  const fromEnv = typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : null;
+  return coerceLegacyTreeUrl(fromEnv ?? fallback, service);
+}
+
+/** URL для GET древа (учитывает env и устаревший `/people/family_chart`). */
+export function getFamilyChartUrl(): string {
+  return envOrDefaultTreeUrl('REACT_APP_FAMILY_CHART_URL', 'family_chart');
+}
+
+/** URL для POST сохранения древа. */
+export function getUpdateTreeUrl(): string {
+  return envOrDefaultTreeUrl('REACT_APP_UPDATE_TREE_URL', 'update_tree');
+}
 
 export function normalizeFamilyChartPayload(json: unknown): FamilyChartData {
   if (Array.isArray(json)) {
@@ -113,7 +156,7 @@ function authorizedInit(init: RequestInit = {}): RequestInit {
 }
 
 export async function fetchFamilyChart(): Promise<FamilyChartData> {
-  const res = await fetch(FAMILY_CHART_URL, authorizedInit());
+  const res = await fetch(getFamilyChartUrl(), authorizedInit());
   if (!res.ok) {
     throw new Error(`Не удалось получить данные о семейном древе: ${res.status} ${res.statusText}`);
   }
@@ -121,15 +164,7 @@ export async function fetchFamilyChart(): Promise<FamilyChartData> {
   return normalizeFamilyChartPayload(json);
 }
 
-function getCsrfToken(): string | null {
-  return document
-    .querySelector('meta[name="csrf-token"]')
-    ?.getAttribute('content')
-    ?.trim() ?? null;
-}
-
 export async function saveFamilyTree(payload: UpdateTreePayload): Promise<FamilyChartData> {
-  const csrfToken = getCsrfToken();
   const headers = new Headers();
   headers.set('Content-Type', 'application/json');
   headers.set('Accept', 'application/json');
@@ -137,10 +172,7 @@ export async function saveFamilyTree(payload: UpdateTreePayload): Promise<Family
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  if (csrfToken) {
-    headers.set('X-CSRF-Token', csrfToken);
-  }
-  const res = await fetch(UPDATE_TREE_URL, {
+  const res = await fetch(getUpdateTreeUrl(), {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
