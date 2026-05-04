@@ -4,6 +4,7 @@ import 'family-chart/styles/family-chart.css';
 import Box from '@mui/material/Box';
 import { saveFamilyTree, type FamilyChartData } from '../familyChartApi';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
+import { formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
 
 export type FamilyChartEditCallbacks = {
   /** Fires after any edit/add/remove that updates the library store (full snapshot). */
@@ -20,15 +21,21 @@ export type FamilyChartEditorProps = {
   onDataChange: (next: FamilyChartData) => void;
   /** Called after the server returns canonical nodes so the parent can remount if ids changed. */
   onPersistedData?: (next: FamilyChartData) => void;
-  cardDisplay?: string[][];
+  cardDisplay?: CardDisplayConfig;
   /** Form + schema fields; include `gender` so new relatives validate. */
   editFields?: string[];
   /** Bump to destroy and recreate the chart (e.g. after a server refetch). */
   remountKey?: string | number;
 } & FamilyChartEditCallbacks;
 
-const DEFAULT_CARD_DISPLAY: string[][] = [['first name', 'last name'], ['birthday']];
-const DEFAULT_EDIT_FIELDS = ['first name', 'last name', 'birthday'];
+/** Matches `family-chart` `setCardDisplay`: field groups, field names, or formatters. */
+type CardDisplayConfig = Array<string[] | string | ((d: { data: Record<string, unknown> }) => string)>;
+
+const DEFAULT_CARD_DISPLAY: CardDisplayConfig = [
+  ['first name', 'last name'],
+  (d) => formatFamilyChartYearLine(d.data as Record<string, unknown>),
+];
+const DEFAULT_EDIT_FIELDS = ['first name', 'last name'];
 
 /**
  * Interactive tree using `family-chart` EditTree (same flow as docs example “17-edit-tree”):
