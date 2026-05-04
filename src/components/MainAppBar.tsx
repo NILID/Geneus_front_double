@@ -53,18 +53,6 @@ export function MainAppBar() {
         <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
           <Button
             component={RouterLink}
-            to="/"
-            color="inherit"
-            size="small"
-            sx={{
-              fontWeight: homeActive ? 600 : 400,
-              ...(homeActive && { bgcolor: 'action.selected' }),
-            }}
-          >
-            Главная
-          </Button>
-          <Button
-            component={RouterLink}
             to="/tree"
             color="inherit"
             size="small"

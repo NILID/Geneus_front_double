@@ -72,28 +72,6 @@ function NavTileGlyph({ label }: { label: string }) {
   );
 }
 
-function SectionTitleGlyph({ label }: { label: string }) {
-  return (
-    <Box
-      aria-hidden
-      sx={{
-        width: 28,
-        height: 28,
-        borderRadius: 0.75,
-        bgcolor: 'action.selected',
-        display: 'grid',
-        placeItems: 'center',
-        color: 'primary.light',
-        fontSize: '0.75rem',
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {label}
-    </Box>
-  );
-}
-
 export function HomePage() {
   const [people, setPeople] = useState<PersonHomeRow[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
@@ -172,7 +150,7 @@ export function HomePage() {
                 lineHeight: 1.2,
               }}
             >
-              Добро пожаловать в родословную
+              Добро пожаловать
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 560 }}>
               Здесь собраны персоны, фотографии и заметки семьи. Откройте интерактивное древо связей или
@@ -339,7 +317,6 @@ export function HomePage() {
                 sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <SectionTitleGlyph label="П" />
                   <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
                     Недавно обновлённые персоны
                   </Typography>
@@ -393,7 +370,6 @@ export function HomePage() {
                 sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <SectionTitleGlyph label="Ф" />
                   <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
                     Новые фото
                   </Typography>
@@ -448,7 +424,6 @@ export function HomePage() {
                 sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <SectionTitleGlyph label="З" />
                   <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
                     Свежие идеи
                   </Typography>
