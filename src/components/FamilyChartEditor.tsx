@@ -235,6 +235,7 @@ export function FamilyChartEditor({
 
     const stopRussianUi = observeRussianFamilyChartUi(el);
 
+    // Корень древа: `mainNodeId` с родителя (например FamilyChartPage: URL ?main/?person → персона учётки → первый узел в JSON).
     chart.updateMainId(mainNodeIdRef.current).updateTree({ initial: true });
     appliedMainNodeIdRef.current = mainNodeIdRef.current;
 

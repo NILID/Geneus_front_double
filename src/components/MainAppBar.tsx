@@ -146,7 +146,7 @@ export function MainAppBar() {
           fullWidth
           aria-labelledby="account-dialog-title"
         >
-          <DialogTitle id="account-dialog-title">Учётная запись</DialogTitle>
+          <DialogTitle id="account-dialog-title">Учётная запись: {email}</DialogTitle>
           <DialogContent dividers>
             <AccountSettingsForm
               fieldIdPrefix="account-navbar"

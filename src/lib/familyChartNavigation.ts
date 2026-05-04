@@ -23,20 +23,39 @@ export function pickDefaultMainNodeId(data: FamilyChartData): string {
   return data[0].id;
 }
 
+/** Первый узел в массиве данных древа (как в JSON с сервера). */
+export function pickFirstChartNodeId(data: FamilyChartData): string {
+  if (data.length === 0) {
+    return '1';
+  }
+  return data[0].id;
+}
+
+export type ResolveFamilyTreeMainNodeResult = {
+  mainNodeId: string;
+  /** Переход с `?person=…`, персона не найдена в графе. */
+  missingPersonInTree: boolean;
+  /** Учётка привязана к персоне, которой нет в текущем графе. */
+  missingLinkedPersonInTree: boolean;
+};
+
 /**
+ * Приоритет корня: валидный `main` из URL → `person` из URL → персона учётки (`linkedPersonId`) → первый узел в JSON.
+ *
  * `main` — id узла в данных family-chart; `person` — числовой id персоны в БД (совпадает с `person_id` у узла).
  */
 export function resolveFamilyTreeMainNode(
   data: FamilyChartData,
   mainParam: string | null,
   personParam: string | null,
-): { mainNodeId: string; missingPersonInTree: boolean } {
+  linkedPersonId: number | null | undefined,
+): ResolveFamilyTreeMainNodeResult {
   if (data.length === 0) {
-    return { mainNodeId: '1', missingPersonInTree: false };
+    return { mainNodeId: '1', missingPersonInTree: false, missingLinkedPersonInTree: false };
   }
 
   if (mainParam && data.some((n) => n.id === mainParam)) {
-    return { mainNodeId: mainParam, missingPersonInTree: false };
+    return { mainNodeId: mainParam, missingPersonInTree: false, missingLinkedPersonInTree: false };
   }
 
   if (personParam) {
@@ -50,10 +69,32 @@ export function resolveFamilyTreeMainNode(
       );
     });
     if (found) {
-      return { mainNodeId: found.id, missingPersonInTree: false };
+      return { mainNodeId: found.id, missingPersonInTree: false, missingLinkedPersonInTree: false };
     }
-    return { mainNodeId: pickDefaultMainNodeId(data), missingPersonInTree: true };
+    return {
+      mainNodeId: pickFirstChartNodeId(data),
+      missingPersonInTree: true,
+      missingLinkedPersonInTree: false,
+    };
   }
 
-  return { mainNodeId: pickDefaultMainNodeId(data), missingPersonInTree: false };
+  if (linkedPersonId != null && linkedPersonId > 0) {
+    const found = data.find(
+      (n) => n.person_id != null && Number(n.person_id) === Number(linkedPersonId),
+    );
+    if (found) {
+      return { mainNodeId: found.id, missingPersonInTree: false, missingLinkedPersonInTree: false };
+    }
+    return {
+      mainNodeId: pickFirstChartNodeId(data),
+      missingPersonInTree: false,
+      missingLinkedPersonInTree: true,
+    };
+  }
+
+  return {
+    mainNodeId: pickFirstChartNodeId(data),
+    missingPersonInTree: false,
+    missingLinkedPersonInTree: false,
+  };
 }

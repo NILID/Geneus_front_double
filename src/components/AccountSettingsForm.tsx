@@ -121,14 +121,9 @@ export function AccountSettingsForm({
       ) : null}
       {showIntro ? (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Укажите персону из семейного древа, с которой связана эта учётная запись (например, вы сами).
+          Укажите персону от которой будет строиться семейное древо по-умолчанию.
         </Typography>
       ) : null}
-      {user && (
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          Email: <strong>{user.email}</strong>
-        </Typography>
-      )}
       {!chart && !chartError && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <CircularProgress size={22} />

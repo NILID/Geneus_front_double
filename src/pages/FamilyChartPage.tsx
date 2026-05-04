@@ -11,9 +11,11 @@ import Typography from '@mui/material/Typography';
 import { FamilyChartEditor } from '../components/FamilyChartEditor';
 import { SessionLoading } from '../components/SessionLoading';
 import { fetchFamilyChart, type FamilyChartData } from '../familyChartApi';
-import { pickDefaultMainNodeId, resolveFamilyTreeMainNode } from '../lib/familyChartNavigation';
+import { useAuth } from '../auth/AuthContext';
+import { pickFirstChartNodeId, resolveFamilyTreeMainNode } from '../lib/familyChartNavigation';
 
 export function FamilyChartPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mainParam = searchParams.get('main');
@@ -63,13 +65,21 @@ export function FamilyChartPage() {
     };
   }, []);
 
-  const { treeMainNodeId, missingPersonInTree } = useMemo(() => {
+  const { treeMainNodeId, missingPersonInTree, missingLinkedPersonInTree } = useMemo(() => {
     if (!treeData?.length) {
-      return { treeMainNodeId: pickDefaultMainNodeId([]), missingPersonInTree: false };
+      return {
+        treeMainNodeId: pickFirstChartNodeId([]),
+        missingPersonInTree: false,
+        missingLinkedPersonInTree: false,
+      };
     }
-    const r = resolveFamilyTreeMainNode(treeData, mainParam, personParam);
-    return { treeMainNodeId: r.mainNodeId, missingPersonInTree: r.missingPersonInTree };
-  }, [treeData, mainParam, personParam]);
+    const r = resolveFamilyTreeMainNode(treeData, mainParam, personParam, user?.person_id ?? null);
+    return {
+      treeMainNodeId: r.mainNodeId,
+      missingPersonInTree: r.missingPersonInTree,
+      missingLinkedPersonInTree: r.missingLinkedPersonInTree,
+    };
+  }, [treeData, mainParam, personParam, user?.person_id]);
 
   return (
     <Container maxWidth={false} sx={{ px: { xs: 1, sm: 2 } }}>
@@ -83,7 +93,14 @@ export function FamilyChartPage() {
 
         {missingPersonInTree && personParam != null && (
           <Alert severity="info" role="status">
-            Эта персона ещё не попала в граф древа — показано древо с корнем по умолчанию.
+            Эта персона ещё не попала в граф древа — показано древо от первого человека в данных.
+          </Alert>
+        )}
+
+        {missingLinkedPersonInTree && (
+          <Alert severity="info" role="status">
+            Привязанная к учётной записи персона отсутствует в текущем графе древа — показано с первого человека в
+            данных.
           </Alert>
         )}
 

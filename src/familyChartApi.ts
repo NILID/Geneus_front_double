@@ -96,7 +96,7 @@ export function chartPersonLinkSelectOptions(chart: FamilyChartData): ChartPerso
     const last = typeof d['last name'] === 'string' ? d['last name'].trim() : '';
     const yearLine = formatFamilyChartYearLine(d);
     const name = [last, first].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
-    const label = yearLine ? `${name} — ${yearLine}` : name;
+    const label = yearLine ? `${name} (${yearLine})` : name;
     byId.set(rawId, { id: rawId, label });
   }
   return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
