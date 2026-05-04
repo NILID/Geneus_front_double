@@ -4,11 +4,7 @@ import 'family-chart/styles/family-chart.css';
 import Box from '@mui/material/Box';
 import { saveFamilyTree, type FamilyChartData } from '../familyChartApi';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
-import {
-  RUSSIAN_EDIT_FIELDS,
-  observeRussianFamilyChartUi,
-  russianLinkExistingRelConfig,
-} from '../familyChartEdit/familyChartRussianUi';
+import { RUSSIAN_EDIT_FIELDS, observeRussianFamilyChartUi } from '../familyChartEdit/familyChartRussianUi';
 import { formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
 
 export type FamilyChartEditCallbacks = {
@@ -204,7 +200,6 @@ export function FamilyChartEditor({
           daughter: 'Дочь',
         }
       )
-      .setLinkExistingRelConfig(russianLinkExistingRelConfig())
       .setFields(editFields)
       .setPostSubmit(() => {
         void persistLatestTree();
