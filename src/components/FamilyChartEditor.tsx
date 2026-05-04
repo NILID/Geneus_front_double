@@ -1,8 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as f3 from 'family-chart';
 import 'family-chart/styles/family-chart.css';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import { saveFamilyTree, type FamilyChartData } from '../familyChartApi';
+import Button from '@mui/material/Button';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormLabel from '@mui/material/FormLabel';
+import Paper from '@mui/material/Paper';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { saveFamilyTree, type FamilyChartData, type FamilyChartPerson } from '../familyChartApi';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
 import { RUSSIAN_EDIT_FIELDS, observeRussianFamilyChartUi } from '../familyChartEdit/familyChartRussianUi';
 import { formatFamilyChartPersonNameLine, formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
@@ -44,6 +55,109 @@ const DEFAULT_CARD_DISPLAY: CardDisplayConfig = [
   (d) => formatFamilyChartYearLine(d.data as Record<string, unknown>),
 ];
 const DEFAULT_EDIT_FIELDS = RUSSIAN_EDIT_FIELDS;
+
+function newExternalChartNodeId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `new-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+type FamilyChartEmptyFirstPersonProps = {
+  onCreated: (nodes: FamilyChartData) => void;
+};
+
+/**
+ * `family-chart` не вызывает отрисовку при пустом `data` (`updateTree` выходит сразу).
+ * Первую персону создаём через тот же `saveFamilyTree`, что и правки в графе.
+ */
+function FamilyChartEmptyFirstPerson({ onCreated }: FamilyChartEmptyFirstPersonProps) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [gender, setGender] = useState<'M' | 'F'>('M');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const fn = firstName.trim();
+    const ln = lastName.trim();
+    if (!fn && !ln) {
+      setError('Укажите имя или фамилию.');
+      return;
+    }
+
+    const node: FamilyChartPerson = {
+      id: newExternalChartNodeId(),
+      data: {
+        gender,
+        'first name': fn || 'Unknown',
+        ...(ln ? { 'last name': ln } : {}),
+      },
+      rels: { parents: [], spouses: [], children: [] },
+    };
+
+    setSubmitting(true);
+    try {
+      const saved = await saveFamilyTree({ nodes: [node], removed_ids: [] });
+      onCreated(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Paper
+      component="form"
+      elevation={2}
+      onSubmit={(e) => void handleSubmit(e)}
+      data-testid="family-chart-empty-first-person"
+      sx={{ p: { xs: 2, sm: 3 }, maxWidth: 480, mx: 'auto' }}
+    >
+      <Stack spacing={2}>
+        <Typography variant="h2" component="h2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
+          Древо пусто
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Добавьте первого человека — после сохранения откроется интерактивное древо, как при редактировании
+          родственников на карточках.
+        </Typography>
+        {error && (
+          <Alert severity="error" role="alert">
+            {error}
+          </Alert>
+        )}
+        <TextField
+          label="Имя"
+          value={firstName}
+          onChange={(ev) => setFirstName(ev.target.value)}
+          fullWidth
+          autoComplete="given-name"
+        />
+        <TextField
+          label="Фамилия"
+          value={lastName}
+          onChange={(ev) => setLastName(ev.target.value)}
+          fullWidth
+          autoComplete="family-name"
+        />
+        <FormControl>
+          <FormLabel>Пол</FormLabel>
+          <RadioGroup row value={gender} onChange={(_, v) => setGender(v as 'M' | 'F')}>
+            <FormControlLabel value="M" control={<Radio />} label="Мужской" />
+            <FormControlLabel value="F" control={<Radio />} label="Женский" />
+          </RadioGroup>
+        </FormControl>
+        <Button type="submit" variant="contained" disabled={submitting} size="large">
+          {submitting ? 'Сохранение…' : 'Создать и открыть древо'}
+        </Button>
+      </Stack>
+    </Paper>
+  );
+}
 
 /**
  * Interactive tree using `family-chart` EditTree (same flow as docs example “17-edit-tree”):
@@ -130,8 +244,22 @@ export function FamilyChartEditor({
     }
   }, []);
 
+  const handleFirstPersonCreated = useCallback((saved: FamilyChartData) => {
+    removedIdsRef.current = new Set();
+    lastExportRef.current = saved;
+    internalChangeRef.current = true;
+    const { added } = diffPersonIds(null, saved);
+    callbacksRef.current.onDataChange(saved);
+    callbacksRef.current.onPersistedData?.(saved);
+    callbacksRef.current.onUpdate?.(saved);
+    if (added.length) {
+      callbacksRef.current.onAdd?.(saved, added);
+    }
+    console.log('Первая персона в древе создана и сохранена на сервере.');
+  }, []);
+
   useEffect(() => {
-    if (!data || !containerRef.current) {
+    if (!data || data.length === 0 || !containerRef.current) {
       return;
     }
     if (chartRef.current && createdForKeyRef.current === remountKey) {
@@ -266,7 +394,7 @@ export function FamilyChartEditor({
   }, [mainNodeId]);
 
   useEffect(() => {
-    if (!data || !chartRef.current) {
+    if (!data || data.length === 0 || !chartRef.current) {
       return;
     }
     if (internalChangeRef.current) {
@@ -283,6 +411,33 @@ export function FamilyChartEditor({
     return null;
   }
 
+  const chartAreaSx = {
+    width: '100%',
+    height: { xs: 560, sm: 720, md: 900 },
+    maxWidth: '100%',
+    mx: 'auto' as const,
+  };
+
+  if (data.length === 0) {
+    return (
+      <Box
+        className="f3 chart-container"
+        id="FamilyChart"
+        data-testid="family-chart-empty"
+        aria-busy={false}
+        sx={{
+          ...chartAreaSx,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          px: 2,
+        }}
+      >
+        <FamilyChartEmptyFirstPerson onCreated={handleFirstPersonCreated} />
+      </Box>
+    );
+  }
+
   return (
     <Box
       className="f3 chart-container"
@@ -291,10 +446,7 @@ export function FamilyChartEditor({
       data-testid="family-chart-root"
       aria-busy={isSaving}
       sx={{
-        width: '100%',
-        height: { xs: 560, sm: 720, md: 900 },
-        maxWidth: '100%',
-        mx: 'auto',
+        ...chartAreaSx,
         // family-chart: скрыть «Удалить связь» в форме карточки (режим remove-relative путает и обходит явное сохранение).
         '& .f3-remove-relative-btn': { display: 'none' },
       }}
