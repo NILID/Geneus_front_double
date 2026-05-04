@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
-import MobileStepper from '@mui/material/MobileStepper';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { createPersonFact, type PersonFact } from '../api/personFactsApi';
+
+const FACTS_PAGE_SIZE = 3;
 
 function formatFactWhen(iso: string): string {
   try {
@@ -49,7 +54,7 @@ export function AddPersonFactForm({
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 0 }}>
       <TextField
         label="Добавить факт"
         placeholder="Коротко опишите известное о персоне…"
@@ -74,47 +79,72 @@ export function AddPersonFactForm({
   );
 }
 
-export function PersonFactsCarousel({ facts }: { facts: PersonFact[] }) {
-  const [active, setActive] = useState(0);
+export function PersonFactsPeekList({
+  facts,
+  personId,
+}: {
+  facts: PersonFact[];
+  personId: string;
+}) {
+  const [visible, setVisible] = useState(FACTS_PAGE_SIZE);
 
-  if (facts.length === 0) {
-    return null;
-  }
+  useEffect(() => {
+    setVisible(FACTS_PAGE_SIZE);
+  }, [personId]);
 
-  const current = facts[Math.min(active, facts.length - 1)];
+  const ordered = useMemo(() => {
+    return [...facts].sort((a, b) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return tb - ta;
+    });
+  }, [facts]);
+
+  const shown = ordered.slice(0, visible);
+  const hasMore = visible < ordered.length;
+
+  const authorLine = (email: string | null) =>
+    email != null && email.trim() !== '' ? `от ${email.trim()}` : 'от участника';
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, mt: 2, bgcolor: 'action.hover' }}>
-      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', minHeight: 72 }}>
-        {current.body}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-        {`${current.author_email ?? 'участник'} · ${formatFactWhen(current.created_at)}`}
-      </Typography>
-      {facts.length > 1 && (
-        <MobileStepper
-          variant="dots"
-          steps={facts.length}
-          position="static"
-          activeStep={active}
-          sx={{ mt: 1, bgcolor: 'transparent', justifyContent: 'center' }}
-          nextButton={
-            <Button
-              size="small"
-              onClick={() => setActive((i) => Math.min(i + 1, facts.length - 1))}
-              disabled={active >= facts.length - 1}
-            >
-              Далее
-            </Button>
-          }
-          backButton={
-            <Button size="small" onClick={() => setActive((i) => Math.max(i - 1, 0))} disabled={active <= 0}>
-              Назад
-            </Button>
-          }
-        />
-      )}
-    </Paper>
+    <Box>
+      <List sx={{ py: 0 }}>
+        {shown.map((f, idx) => (
+          <React.Fragment key={f.id}>
+            {idx > 0 ? <Divider component="li" variant="fullWidth" sx={{ my: 0 }} /> : null}
+            <ListItem alignItems="flex-start" sx={{ py: 1.25, px: 0 }}>
+              <ListItemText
+                primary={f.body}
+                secondary={authorLine(f.author_email)}
+                slotProps={{
+                  primary: {
+                    variant: 'body2',
+                    sx: { whiteSpace: 'pre-wrap' },
+                  },
+                  secondary: {
+                    variant: 'caption',
+                    color: 'text.secondary',
+                    sx: { mt: 0.75, display: 'block' },
+                  },
+                }}
+              />
+            </ListItem>
+          </React.Fragment>
+        ))}
+      </List>
+      {hasMore ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Button
+            type="button"
+            variant="text"
+            size="small"
+            onClick={() => setVisible((v) => v + FACTS_PAGE_SIZE)}
+          >
+            Показать ещё
+          </Button>
+        </Box>
+      ) : null}
+    </Box>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -19,8 +19,10 @@ import {
   fetchPerson,
   personDisplayName,
   updatePerson,
+  type PersonDetail,
   type PersonUpdateInput,
 } from '../api/personApi';
+import { PersonProfileShell } from '../components/PersonProfileShell';
 import { PlaceAutocomplete } from '../components/PlaceAutocomplete';
 import { SettlementMapPicker } from '../components/SettlementMapPicker';
 import type { PlaceSuggestion } from '../lib/osmGeocode';
@@ -62,6 +64,7 @@ export function EditPersonPage() {
   const [deathPlace, setDeathPlace] = useState<PlaceSuggestion | null>(null);
   const [deathInput, setDeathInput] = useState('');
 
+  const [personRecord, setPersonRecord] = useState<PersonDetail | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -81,6 +84,7 @@ export function EditPersonPage() {
         if (cancelled) {
           return;
         }
+        setPersonRecord(p);
         setDisplayName(personDisplayName(p));
         setFirstName(p.first_name);
         setLastName(p.last_name ?? '');
@@ -139,6 +143,18 @@ export function EditPersonPage() {
       }
     };
   }, [avatarPreview]);
+
+  const profileForShell = useMemo((): PersonDetail | null => {
+    if (!personRecord) {
+      return null;
+    }
+    return {
+      ...personRecord,
+      first_name: firstName,
+      last_name: lastName.trim() ? lastName : null,
+      avatar_url: avatarPreview ?? avatarUrl ?? personRecord.avatar_url,
+    };
+  }, [personRecord, firstName, lastName, avatarPreview, avatarUrl]);
 
   function onAvatarPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -257,26 +273,49 @@ export function EditPersonPage() {
     );
   }
 
-  return (
-    <Container maxWidth="md" sx={{ py: 3 }}>
-      <Breadcrumbs sx={{ mb: 2 }}>
-        <Link component={RouterLink} to="/" underline="hover" color="inherit">
-          Семейное древо
-        </Link>
-        <Link
-          component={RouterLink}
-          to={`/person/${encodeURIComponent(id)}`}
-          underline="hover"
-          color="inherit"
-        >
-          {displayName || 'Персона'}
-        </Link>
-        <Typography color="text.primary">Редактирование</Typography>
-      </Breadcrumbs>
+  if (!personRecord || !profileForShell) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 4 }}>
+        <Alert severity="error" role="alert" sx={{ mb: 2 }}>
+          Не удалось загрузить данные профиля
+        </Alert>
+        <Button component={RouterLink} to="/" variant="contained">
+          Назад к древу
+        </Button>
+      </Container>
+    );
+  }
 
-      <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h1" component="h1" gutterBottom>
-          Редактировать персону
+  const breadcrumbs = (
+    <Breadcrumbs sx={{ '& li': { typography: 'body2' } }}>
+      <Link component={RouterLink} to="/" underline="hover" color="inherit">
+        Семейное древо
+      </Link>
+      <Link
+        component={RouterLink}
+        to={`/person/${encodeURIComponent(id)}`}
+        underline="hover"
+        color="inherit"
+      >
+        {displayName || personDisplayName(personRecord)}
+      </Link>
+      <Typography color="text.primary">Редактирование</Typography>
+    </Breadcrumbs>
+  );
+
+  return (
+    <PersonProfileShell person={profileForShell} personId={id} activeTab="edit" breadcrumbs={breadcrumbs}>
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 2,
+          border: 1,
+          borderColor: 'divider',
+          p: { xs: 2, sm: 3 },
+        }}
+      >
+        <Typography variant="h6" component="h2" gutterBottom sx={{ fontWeight: 700 }}>
+          Данные персоны
         </Typography>
 
         <Box component="form" onSubmit={onSubmit} noValidate>
@@ -446,6 +485,6 @@ export function EditPersonPage() {
           </Stack>
         </Box>
       </Paper>
-    </Container>
+    </PersonProfileShell>
   );
 }
