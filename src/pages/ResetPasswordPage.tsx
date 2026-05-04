@@ -61,7 +61,8 @@ export function ResetPasswordPage() {
               onChange={(ev) => setPassword(ev.target.value)}
               required
               fullWidth
-              slotProps={{ htmlInput: { minLength: 6 } }}
+              slotProps={{ htmlInput: { minLength: 8 } }}
+              helperText="Не менее 8 символов, заглавная латинская буква и спецсимвол"
             />
             <TextField
               label="Повторите новый пароль"
@@ -71,7 +72,7 @@ export function ResetPasswordPage() {
               onChange={(ev) => setPasswordConfirmation(ev.target.value)}
               required
               fullWidth
-              slotProps={{ htmlInput: { minLength: 6 } }}
+              slotProps={{ htmlInput: { minLength: 8 } }}
             />
             {error && (
               <Alert severity="error" role="alert">

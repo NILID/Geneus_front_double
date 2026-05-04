@@ -60,8 +60,8 @@ export function RegisterPage() {
               onChange={(ev) => setPassword(ev.target.value)}
               required
               fullWidth
-              slotProps={{ htmlInput: { minLength: 6 } }}
-              helperText="Не менее 6 символов"
+              slotProps={{ htmlInput: { minLength: 8 } }}
+              helperText="Не менее 8 символов, заглавная латинская буква и спецсимвол"
             />
             <TextField
               label="Повторите пароль"
@@ -71,7 +71,7 @@ export function RegisterPage() {
               onChange={(ev) => setPasswordConfirmation(ev.target.value)}
               required
               fullWidth
-              slotProps={{ htmlInput: { minLength: 6 } }}
+              slotProps={{ htmlInput: { minLength: 8 } }}
             />
             {error && (
               <Alert severity="error" role="alert">
