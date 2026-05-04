@@ -29,7 +29,7 @@ export function FamilyChartPage() {
     (next: FamilyChartData) => {
       setTreeData(next);
       setChartGeneration((g) => g + 1);
-      appendLog(`saveSuccess (${next.length} people synced from server)`);
+      appendLog(`Сохранено (${next.length} человек синхронизировано с сервером)`);
     },
     [appendLog],
   );
@@ -108,20 +108,20 @@ export function FamilyChartPage() {
             remountKey={chartGeneration}
             onDataChange={setTreeData}
             onPersistedData={handlePersistedData}
-            onUpdate={(data) => appendLog(`onUpdate (${data.length} people)`)}
+            onUpdate={(data) => appendLog(`Изменения (${data.length} человек в древе)`)}
             onAdd={(data, ids) =>
-              appendLog(`onAdd [${ids.join(', ')}] → ${data.length} people total`)
+              appendLog(`Добавлены [${ids.join(', ')}] → всего ${data.length} человек`)
             }
             onRemove={(data, ids) =>
-              appendLog(`onRemove [${ids.join(', ')}] → ${data.length} people total`)
+              appendLog(`Удалены [${ids.join(', ')}] → всего ${data.length} человек`)
             }
           />
         )}
 
         {eventLog.length > 0 && (
-          <Paper elevation={1} sx={{ p: 2 }} aria-label="Edit event log">
+          <Paper elevation={1} sx={{ p: 2 }} aria-label="Журнал правок древа">
             <Typography variant="h2" component="h2" gutterBottom>
-              Recent interactions
+              Последние действия
             </Typography>
             <Divider sx={{ mb: 1 }} />
             <List dense sx={{ py: 0, maxHeight: 320, overflow: 'auto' }}>

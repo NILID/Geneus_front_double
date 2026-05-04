@@ -4,6 +4,11 @@ import 'family-chart/styles/family-chart.css';
 import Box from '@mui/material/Box';
 import { saveFamilyTree, type FamilyChartData } from '../familyChartApi';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
+import {
+  RUSSIAN_EDIT_FIELDS,
+  observeRussianFamilyChartUi,
+  russianLinkExistingRelConfig,
+} from '../familyChartEdit/familyChartRussianUi';
 import { formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
 
 export type FamilyChartEditCallbacks = {
@@ -22,8 +27,8 @@ export type FamilyChartEditorProps = {
   /** Called after the server returns canonical nodes so the parent can remount if ids changed. */
   onPersistedData?: (next: FamilyChartData) => void;
   cardDisplay?: CardDisplayConfig;
-  /** Form + schema fields; include `gender` so new relatives validate. */
-  editFields?: string[];
+  /** Поля формы: строки = id и label; или `{ id, label, type }` при русских подписях. */
+  editFields?: Array<string | { type: string; id: string; label: string }>;
   /** Bump to destroy and recreate the chart (e.g. after a server refetch). */
   remountKey?: string | number;
 } & FamilyChartEditCallbacks;
@@ -35,7 +40,7 @@ const DEFAULT_CARD_DISPLAY: CardDisplayConfig = [
   ['first name', 'last name'],
   (d) => formatFamilyChartYearLine(d.data as Record<string, unknown>),
 ];
-const DEFAULT_EDIT_FIELDS = ['first name', 'last name'];
+const DEFAULT_EDIT_FIELDS = RUSSIAN_EDIT_FIELDS;
 
 /**
  * Interactive tree using `family-chart` EditTree (same flow as docs example “17-edit-tree”):
@@ -98,7 +103,7 @@ export function FamilyChartEditor({
       internalChangeRef.current = true;
       callbacksRef.current.onDataChange(savedNodes);
       callbacksRef.current.onPersistedData?.(savedNodes);
-      console.log('Древо семьи сохранено из формы редактирования.')
+      console.log('Древо семьи сохранено из формы редактирования.');
     } catch (error) {
       console.error('Не удалось сохранить древо семьи:', error);
     } finally {
@@ -137,6 +142,7 @@ export function FamilyChartEditor({
           daughter: 'Дочь',
         }
       )
+      .setLinkExistingRelConfig(russianLinkExistingRelConfig())
       .setFields(editFields)
       .setPostSubmit(() => {
         void persistLatestTree();
@@ -167,6 +173,8 @@ export function FamilyChartEditor({
     createdForKeyRef.current = remountKey;
     lastExportRef.current = data;
 
+    const stopRussianUi = observeRussianFamilyChartUi(el);
+
     chart
       .updateMainId('1')
       .updateTree({ initial: true });
@@ -174,6 +182,7 @@ export function FamilyChartEditor({
     internalChangeRef.current = true;
 
     return () => {
+      stopRussianUi();
       editTree.destroy();
       el.innerHTML = '';
       chartRef.current = undefined;
