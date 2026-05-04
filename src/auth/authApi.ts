@@ -7,6 +7,22 @@ export const API_BASE =
 export interface AuthUser {
   id: number;
   email: string;
+  /** Персона древа, с которой связана учётная запись (если задана). */
+  person_id: number | null;
+}
+
+function parseAuthUserPayload(data: unknown): AuthUser {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid user payload');
+  }
+  const o = data as Record<string, unknown>;
+  const pid = o.person_id;
+  let person_id: number | null = null;
+  if (pid !== null && pid !== undefined && pid !== '') {
+    const n = Number(pid);
+    person_id = Number.isFinite(n) && n > 0 ? n : null;
+  }
+  return { id: Number(o.id), email: String(o.email), person_id };
 }
 
 function buildHeaders(includeJsonBody: boolean, withAuth: boolean): Headers {
@@ -57,8 +73,7 @@ export async function loginRequest(email: string, password: string): Promise<Aut
   }
   setStoredToken(token);
   const data: unknown = await res.json();
-  const o = data as Record<string, unknown>;
-  return { id: Number(o.id), email: String(o.email) };
+  return parseAuthUserPayload(data);
 }
 
 export async function registerRequest(
@@ -82,8 +97,7 @@ export async function registerRequest(
   }
   setStoredToken(token);
   const data: unknown = await res.json();
-  const o = data as Record<string, unknown>;
-  return { id: Number(o.id), email: String(o.email) };
+  return parseAuthUserPayload(data);
 }
 
 export async function logoutRequest(): Promise<void> {
@@ -109,8 +123,22 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
     throw new Error(await parseErrorMessage(res));
   }
   const data: unknown = await res.json();
-  const o = data as Record<string, unknown>;
-  return { id: Number(o.id), email: String(o.email) };
+  return parseAuthUserPayload(data);
+}
+
+export async function updateCurrentUserProfile(updates: {
+  person_id: number | null;
+}): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+    method: 'PATCH',
+    headers: buildHeaders(true, true),
+    body: JSON.stringify({ user: { person_id: updates.person_id } }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+  const data: unknown = await res.json();
+  return parseAuthUserPayload(data);
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {

@@ -17,6 +17,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { MediaPage } from './pages/MediaPage';
 import { MapPage } from './pages/MapPage';
 import { IdeasPage } from './pages/IdeasPage';
+import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { SessionLoading } from './components/SessionLoading';
 
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
@@ -128,6 +129,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <IdeasPage />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/account"
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <AccountSettingsPage />
             </AuthenticatedLayout>
           </ProtectedRoute>
         }

@@ -1,28 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import { AccountSettingsForm } from './AccountSettingsForm';
 import { useAuth } from '../auth/AuthContext';
 
 export function MainAppBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [accountOpen, setAccountOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
     navigate('/login', { replace: true });
   }
 
-  const homeActive = pathname === '/';
   const treeActive = pathname === '/tree';
   const mediaActive = pathname === '/media';
   const mapActive = pathname === '/map';
   const ideasActive = pathname === '/ideas';
+
+  const email = user?.email ?? '';
 
   return (
     <AppBar
@@ -101,9 +108,56 @@ export function MainAppBar() {
           </Button>
         </Stack>
         <Box sx={{ flexGrow: 1 }} />
-        <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: { xs: 140, sm: 280 }, display: { xs: 'none', sm: 'block' } }}>
-          {user?.email}
-        </Typography>
+        {email ? (
+          <Box
+            component="button"
+            type="button"
+            onClick={() => setAccountOpen(true)}
+            sx={{
+              cursor: 'pointer',
+              maxWidth: { xs: 160, sm: 280 },
+              textAlign: 'right',
+              border: 'none',
+              background: 'none',
+              padding: 0,
+              font: 'inherit',
+              color: 'inherit',
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              noWrap
+              title={email}
+              sx={{
+                borderBottom: 1,
+                borderColor: 'divider',
+                '&:hover': { color: 'text.primary' },
+              }}
+            >
+              {email}
+            </Typography>
+          </Box>
+        ) : null}
+        <Dialog
+          open={accountOpen}
+          onClose={() => setAccountOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          aria-labelledby="account-dialog-title"
+        >
+          <DialogTitle id="account-dialog-title">Учётная запись</DialogTitle>
+          <DialogContent dividers>
+            <AccountSettingsForm
+              fieldIdPrefix="account-navbar"
+              showIntro
+              onSaved={() => setAccountOpen(false)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAccountOpen(false)}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
         <Button variant="outlined" color="inherit" size="small" onClick={() => void handleLogout()}>
           Выйти
         </Button>

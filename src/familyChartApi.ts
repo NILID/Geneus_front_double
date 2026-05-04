@@ -1,4 +1,5 @@
 import { getStoredToken } from './auth/storage';
+import { formatFamilyChartYearLine } from './lib/genealogyDateFormat';
 
 /**
  * Shape expected by family-chart (see library data format).
@@ -72,6 +73,30 @@ export function chartPeopleAsTagOptions(chart: FamilyChartData): ChartPersonOpti
     const last =
       typeof node.data?.['last name'] === 'string' ? node.data['last name'].trim() : '';
     const label = [first, last].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
+    byId.set(rawId, { id: rawId, label });
+  }
+  return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+}
+
+/**
+ * Подписи для привязки учётки к персоне: фамилия, имя и строка лет как на карточках древа
+ * ({@link formatFamilyChartYearLine}).
+ */
+export function chartPersonLinkSelectOptions(chart: FamilyChartData): ChartPersonOption[] {
+  const byId = new Map<number, ChartPersonOption>();
+  for (const node of chart) {
+    const numericFromId =
+      typeof node.id === 'string' && /^\d+$/.test(node.id) ? Number(node.id) : NaN;
+    const rawId = node.person_id ?? (Number.isFinite(numericFromId) ? numericFromId : NaN);
+    if (!Number.isFinite(rawId) || rawId < 1) {
+      continue;
+    }
+    const d = node.data as Record<string, unknown>;
+    const first = typeof d['first name'] === 'string' ? d['first name'].trim() : '';
+    const last = typeof d['last name'] === 'string' ? d['last name'].trim() : '';
+    const yearLine = formatFamilyChartYearLine(d);
+    const name = [last, first].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
+    const label = yearLine ? `${name} — ${yearLine}` : name;
     byId.set(rawId, { id: rawId, label });
   }
   return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
