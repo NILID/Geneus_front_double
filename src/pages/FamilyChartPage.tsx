@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
@@ -74,40 +72,8 @@ export function FamilyChartPage() {
   }, [treeData, mainParam, personParam]);
 
   return (
-    <Container maxWidth={false} sx={{ py: 2, px: { xs: 1, sm: 2 } }}>
+    <Container maxWidth={false} sx={{ px: { xs: 1, sm: 2 } }}>
       <Stack spacing={2}>
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h1" component="h1" align="center" gutterBottom>
-            Семейное древо
-          </Typography>
-
-          {treeData && treeData.length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-                {treeData.map((node) => {
-                  const label =
-                    [node.data?.['first name'], node.data?.['last name']]
-                      .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
-                      .join(' ')
-                      .trim() || node.id;
-                  return (
-                    <Chip
-                      key={node.id}
-                      component={RouterLink}
-                      to={`/person/${encodeURIComponent(String(node.person_id ?? node.id))}`}
-                      label={label}
-                      clickable
-                      color="primary"
-                      variant="outlined"
-                      size="small"
-                    />
-                  );
-                })}
-              </Box>
-            </Box>
-          )}
-        </Paper>
-
         {loading && <SessionLoading message="Загружаем древо…" />}
         {error && (
           <Alert severity="error" role="alert">
