@@ -20,6 +20,8 @@ export interface PersonDetail {
   bio: string | null;
   date_of_birth: string | null;
   date_of_death: string | null;
+  birth_date_year_only: boolean;
+  death_date_year_only: boolean;
   location_of_birth: string | null;
   location_of_death: string | null;
   birth_latitude: number | null;
@@ -66,6 +68,8 @@ function parseCoord(v: unknown): number | null {
 function normalizePersonDetail(raw: PersonDetail): PersonDetail {
   return {
     ...raw,
+    birth_date_year_only: Boolean(raw.birth_date_year_only),
+    death_date_year_only: Boolean(raw.death_date_year_only),
     birth_latitude: parseCoord(raw.birth_latitude as unknown),
     birth_longitude: parseCoord(raw.birth_longitude as unknown),
     death_latitude: parseCoord(raw.death_latitude as unknown),
@@ -161,6 +165,8 @@ export interface PersonUpdateInput {
   bio: string | null;
   date_of_birth: string | null;
   date_of_death: string | null;
+  birth_date_year_only: boolean;
+  death_date_year_only: boolean;
   location_of_birth: string | null;
   location_of_death: string | null;
   birth_latitude: number | null;
@@ -205,6 +211,8 @@ function appendPersonFormData(fd: FormData, input: PersonUpdateInput) {
   p('bio', trimToNull(input.bio) ?? '');
   p('date_of_birth', dateInputToApi(input.date_of_birth) ?? '');
   p('date_of_death', dateInputToApi(input.date_of_death) ?? '');
+  p('birth_date_year_only', input.birth_date_year_only ? '1' : '0');
+  p('death_date_year_only', input.death_date_year_only ? '1' : '0');
   p('location_of_birth', trimToNull(input.location_of_birth) ?? '');
   p('location_of_death', trimToNull(input.location_of_death) ?? '');
   appendCoord(fd, 'birth_latitude', input.birth_latitude);
@@ -247,6 +255,8 @@ export async function updatePerson(
               bio: trimToNull(input.bio),
               date_of_birth: dateInputToApi(input.date_of_birth),
               date_of_death: dateInputToApi(input.date_of_death),
+              birth_date_year_only: input.birth_date_year_only,
+              death_date_year_only: input.death_date_year_only,
               location_of_birth: trimToNull(input.location_of_birth),
               location_of_death: trimToNull(input.location_of_death),
               birth_latitude: input.birth_latitude,

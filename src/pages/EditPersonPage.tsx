@@ -3,6 +3,8 @@ import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import MuiAvatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -26,6 +28,7 @@ import { PersonProfileShell } from '../components/PersonProfileShell';
 import { PlaceAutocomplete } from '../components/PlaceAutocomplete';
 import { SettlementMapPicker } from '../components/SettlementMapPicker';
 import type { PlaceSuggestion } from '../lib/osmGeocode';
+import { extractGenealogyYear } from '../lib/genealogyDateFormat';
 import { resolvePlaceCoordinates } from '../lib/osmGeocode';
 import { SessionLoading } from '../components/SessionLoading';
 
@@ -58,6 +61,10 @@ export function EditPersonPage() {
   const [bio, setBio] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [dateOfDeath, setDateOfDeath] = useState('');
+  const [birthYearOnly, setBirthYearOnly] = useState(false);
+  const [deathYearOnly, setDeathYearOnly] = useState(false);
+  const [birthYearInput, setBirthYearInput] = useState('');
+  const [deathYearInput, setDeathYearInput] = useState('');
 
   const [birthPlace, setBirthPlace] = useState<PlaceSuggestion | null>(null);
   const [birthInput, setBirthInput] = useState('');
@@ -90,8 +97,12 @@ export function EditPersonPage() {
         setLastName(p.last_name ?? '');
         setGender(p.gender);
         setBio(p.bio ?? '');
+        setBirthYearOnly(Boolean(p.birth_date_year_only));
+        setDeathYearOnly(Boolean(p.death_date_year_only));
         setDateOfBirth(isoToDateInput(p.date_of_birth));
         setDateOfDeath(isoToDateInput(p.date_of_death));
+        setBirthYearInput(extractGenealogyYear(p.date_of_birth ?? '') ?? '');
+        setDeathYearInput(extractGenealogyYear(p.date_of_death ?? '') ?? '');
 
         const bLabel = p.location_of_birth ?? '';
         setBirthInput(bLabel);
@@ -192,6 +203,20 @@ export function EditPersonPage() {
       return;
     }
     setSaveError(null);
+
+    if (birthYearOnly) {
+      if (!dateOfBirth || !/^\d{4}-01-01$/.test(dateOfBirth)) {
+        setSaveError('Укажите четырёхзначный год рождения (режим «известен только год»).');
+        return;
+      }
+    }
+    if (deathYearOnly) {
+      if (!dateOfDeath || !/^\d{4}-01-01$/.test(dateOfDeath)) {
+        setSaveError('Укажите четырёхзначный год смерти (режим «известен только год»).');
+        return;
+      }
+    }
+
     setSaving(true);
 
     const birthText = birthInput.trim();
@@ -235,6 +260,8 @@ export function EditPersonPage() {
       bio: bio || null,
       date_of_birth: dateOfBirth || null,
       date_of_death: dateOfDeath || null,
+      birth_date_year_only: birthYearOnly,
+      death_date_year_only: deathYearOnly,
       location_of_birth: birthText || null,
       location_of_death: deathText || null,
       birth_latitude,
@@ -390,25 +417,119 @@ export function EditPersonPage() {
               </Select>
             </FormControl>
 
-            <TextField
-              label="Дата рождения"
-              name="date_of_birth"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
+            <Box>
+              {birthYearOnly ? (
+                <TextField
+                  label="Год рождения"
+                  name="birth_year"
+                  value={birthYearInput}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setBirthYearInput(digits);
+                    if (digits.length === 4) {
+                      const y = Number(digits);
+                      if (y >= 1 && y <= 9999) {
+                        setDateOfBirth(`${digits}-01-01`);
+                      }
+                    } else {
+                      setDateOfBirth('');
+                    }
+                  }}
+                  fullWidth
+                  placeholder="Например, 1920"
+                  slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 4 } }}
+                />
+              ) : (
+                <TextField
+                  label="Дата рождения"
+                  name="date_of_birth"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              )}
+              <FormControlLabel
+                sx={{ mt: 0.5, alignItems: 'flex-start', ml: 0 }}
+                control={
+                  <Checkbox
+                    checked={birthYearOnly}
+                    onChange={(_, checked) => {
+                      setBirthYearOnly(checked);
+                      if (checked) {
+                        const y = extractGenealogyYear(dateOfBirth);
+                        if (y) {
+                          setDateOfBirth(`${y}-01-01`);
+                          setBirthYearInput(y);
+                        } else {
+                          setDateOfBirth('');
+                          setBirthYearInput('');
+                        }
+                      }
+                    }}
+                  />
+                }
+                label="Известен только год рождения (день и месяц неизвестны)"
+              />
+            </Box>
 
-            <TextField
-              label="Дата смерти"
-              name="date_of_death"
-              type="date"
-              value={dateOfDeath}
-              onChange={(e) => setDateOfDeath(e.target.value)}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
+            <Box>
+              {deathYearOnly ? (
+                <TextField
+                  label="Год смерти"
+                  name="death_year"
+                  value={deathYearInput}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setDeathYearInput(digits);
+                    if (digits.length === 4) {
+                      const y = Number(digits);
+                      if (y >= 1 && y <= 9999) {
+                        setDateOfDeath(`${digits}-01-01`);
+                      }
+                    } else {
+                      setDateOfDeath('');
+                    }
+                  }}
+                  fullWidth
+                  placeholder="Например, 1995"
+                  slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 4 } }}
+                />
+              ) : (
+                <TextField
+                  label="Дата смерти"
+                  name="date_of_death"
+                  type="date"
+                  value={dateOfDeath}
+                  onChange={(e) => setDateOfDeath(e.target.value)}
+                  fullWidth
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+              )}
+              <FormControlLabel
+                sx={{ mt: 0.5, alignItems: 'flex-start', ml: 0 }}
+                control={
+                  <Checkbox
+                    checked={deathYearOnly}
+                    onChange={(_, checked) => {
+                      setDeathYearOnly(checked);
+                      if (checked) {
+                        const y = extractGenealogyYear(dateOfDeath);
+                        if (y) {
+                          setDateOfDeath(`${y}-01-01`);
+                          setDeathYearInput(y);
+                        } else {
+                          setDateOfDeath('');
+                          setDeathYearInput('');
+                        }
+                      }
+                    }}
+                  />
+                }
+                label="Известен только год смерти (день и месяц неизвестны)"
+              />
+            </Box>
 
             <PlaceAutocomplete
               fieldLabel="Место рождения"

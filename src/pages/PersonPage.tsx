@@ -29,7 +29,7 @@ import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
 import { AddPersonFactForm, PersonFactsPeekList } from '../components/PersonFactsWidgets';
 import { PersonProfileShell } from '../components/PersonProfileShell';
 import { SessionLoading } from '../components/SessionLoading';
-import { formatGenealogyDateForDisplay } from '../lib/genealogyDateFormat';
+import { formatPersonGenealogyDate } from '../lib/genealogyDateFormat';
 
 function ProfileSectionCard({
   title,
@@ -276,13 +276,13 @@ export function PersonPage() {
                 {person.date_of_birth && (
                   <PersonDetailRow
                     label="Дата рождения"
-                    value={formatGenealogyDateForDisplay(person.date_of_birth)}
+                    value={formatPersonGenealogyDate(person.date_of_birth, person.birth_date_year_only)}
                   />
                 )}
                 {person.date_of_death && (
                   <PersonDetailRow
                     label="Дата смерти"
-                    value={formatGenealogyDateForDisplay(person.date_of_death)}
+                    value={formatPersonGenealogyDate(person.date_of_death, person.death_date_year_only)}
                   />
                 )}
                 {person.location_of_birth && (

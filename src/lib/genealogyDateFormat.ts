@@ -88,3 +88,17 @@ export function formatGenealogyDateForDisplay(value: string | null | undefined):
   }
   return `${day} ${RU_MONTHS_GEN[month - 1]} ${year}`;
 }
+
+/** Для персоны: при флаге «только год» показываем четырёхзначный год, иначе полная дата. */
+export function formatPersonGenealogyDate(
+  iso: string | null | undefined,
+  yearOnly: boolean | null | undefined,
+): string {
+  if (!iso) {
+    return '';
+  }
+  if (yearOnly) {
+    return extractGenealogyYear(iso) ?? formatGenealogyDateForDisplay(iso);
+  }
+  return formatGenealogyDateForDisplay(iso);
+}
