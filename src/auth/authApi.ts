@@ -172,3 +172,42 @@ export async function resetPasswordRequest(
     throw new Error(await parseErrorMessage(res));
   }
 }
+
+export async function sendInvitationRequest(email: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/invitations`, {
+    method: 'POST',
+    headers: buildHeaders(true, true),
+    body: JSON.stringify({ user: { email: email.trim() } }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+}
+
+export async function acceptInvitationRequest(
+  invitationToken: string,
+  password: string,
+  passwordConfirmation: string,
+): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/invitations`, {
+    method: 'PATCH',
+    headers: buildHeaders(true, false),
+    body: JSON.stringify({
+      user: {
+        invitation_token: invitationToken,
+        password,
+        password_confirmation: passwordConfirmation,
+      },
+    }),
+  });
+  const token = readBearerFromResponse(res);
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+  if (!token) {
+    throw new Error('Не удалось получить токен после принятия приглашения.');
+  }
+  setStoredToken(token);
+  const data: unknown = await res.json();
+  return parseAuthUserPayload(data);
+}

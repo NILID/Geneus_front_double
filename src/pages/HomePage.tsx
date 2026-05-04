@@ -10,10 +10,17 @@ import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
+import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { sendInvitationRequest } from '../auth/authApi';
 import { fetchGalleryPhotos, type GalleryPhoto } from '../api/galleryPhotoApi';
 import { fetchIdeas, type Idea } from '../api/ideaApi';
 import {
@@ -79,6 +86,12 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteSnackbar, setInviteSnackbar] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
@@ -101,6 +114,22 @@ export function HomePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function onInviteSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setInviteError(null);
+    setInviteBusy(true);
+    try {
+      await sendInvitationRequest(inviteEmail);
+      setInviteOpen(false);
+      setInviteEmail('');
+      setInviteSnackbar('Приглашение отправлено на указанный email');
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Не удалось отправить приглашение');
+    } finally {
+      setInviteBusy(false);
+    }
+  }
 
   return (
     <Box sx={{ pb: 4 }}>
@@ -175,10 +204,65 @@ export function HomePage() {
               >
                 Медиа
               </Button>
+              <Button
+                type="button"
+                variant="outlined"
+                size="large"
+                color="inherit"
+                onClick={() => {
+                  setInviteError(null);
+                  setInviteOpen(true);
+                }}
+              >
+                Пригласить
+              </Button>
             </Stack>
           </Stack>
         </Container>
       </Box>
+
+      <Dialog open={inviteOpen} onClose={() => !inviteBusy && setInviteOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Пригласить пользователя</DialogTitle>
+        <Box component="form" onSubmit={onInviteSubmit}>
+          <DialogContent>
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                На указанный адрес уйдёт письмо со ссылкой для регистрации.
+              </Typography>
+              <TextField
+                label="Email"
+                type="email"
+                autoComplete="email"
+                value={inviteEmail}
+                onChange={(ev) => setInviteEmail(ev.target.value)}
+                required
+                fullWidth
+                autoFocus
+              />
+              {inviteError && (
+                <Alert severity="error" onClose={() => setInviteError(null)}>
+                  {inviteError}
+                </Alert>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button type="button" onClick={() => setInviteOpen(false)} disabled={inviteBusy}>
+              Отмена
+            </Button>
+            <Button type="submit" variant="contained" disabled={inviteBusy}>
+              {inviteBusy ? 'Отправка…' : 'Отправить'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(inviteSnackbar)}
+        autoHideDuration={6000}
+        onClose={() => setInviteSnackbar(null)}
+        message={inviteSnackbar}
+      />
 
       <Container maxWidth="lg" sx={{ mt: 4 }}>
         {error && (
