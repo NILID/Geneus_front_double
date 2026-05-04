@@ -10,6 +10,16 @@ export interface PersonSummary {
   last_name: string | null;
 }
 
+/** Элемент списка «недавно обновлённые» на главной. */
+export interface PersonHomeRow {
+  id: number;
+  chart_external_id: string;
+  first_name: string;
+  last_name: string | null;
+  avatar_url: string | null;
+  updated_at: string;
+}
+
 export interface PersonDetail {
   id: number;
   chart_id: string | null;
@@ -128,6 +138,30 @@ export async function fetchPerson(id: string): Promise<PersonDetail> {
     throw new Error('Не удалось получить персон');
   }
   return normalizePersonDetail(o.person);
+}
+
+export async function fetchRecentPeople(): Promise<PersonHomeRow[]> {
+  const res = await fetch(`${API_BASE}/api/v1/people/recent`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const body: unknown = await res.json();
+      if (body && typeof body === 'object' && typeof (body as { error?: string }).error === 'string') {
+        msg = (body as { error: string }).error;
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const json: unknown = await res.json();
+  const o = json as { people?: PersonHomeRow[] };
+  if (!Array.isArray(o.people)) {
+    throw new Error('Некорректный ответ сервера');
+  }
+  return o.people;
 }
 
 export async function fetchPeopleMapLocations(): Promise<PersonMapLocation[]> {

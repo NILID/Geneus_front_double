@@ -5,6 +5,7 @@ import './App.css';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AuthenticatedLayout } from './components/AuthenticatedLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { HomePage } from './pages/HomePage';
 import { FamilyChartPage } from './pages/FamilyChartPage';
 import { EditPersonPage } from './pages/EditPersonPage';
 import { PersonPage } from './pages/PersonPage';
@@ -53,6 +54,16 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         path="/"
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <HomePage />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tree"
         element={
           <ProtectedRoute>
             <AuthenticatedLayout>

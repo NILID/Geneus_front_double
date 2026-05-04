@@ -18,7 +18,8 @@ export function MainAppBar() {
     navigate('/login', { replace: true });
   }
 
-  const treeActive = pathname === '/';
+  const homeActive = pathname === '/';
+  const treeActive = pathname === '/tree';
   const mediaActive = pathname === '/media';
   const mapActive = pathname === '/map';
   const ideasActive = pathname === '/ideas';
@@ -53,6 +54,18 @@ export function MainAppBar() {
           <Button
             component={RouterLink}
             to="/"
+            color="inherit"
+            size="small"
+            sx={{
+              fontWeight: homeActive ? 600 : 400,
+              ...(homeActive && { bgcolor: 'action.selected' }),
+            }}
+          >
+            Главная
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/tree"
             color="inherit"
             size="small"
             sx={{
