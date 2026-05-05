@@ -12,6 +12,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { AccountSettingsForm } from './AccountSettingsForm';
 import { useAuth } from '../auth/AuthContext';
+import { canAccessAudit, canManageUsers } from '../auth/roles';
 
 export function MainAppBar() {
   const { user, logout } = useAuth();
@@ -29,6 +30,7 @@ export function MainAppBar() {
   const mapActive = pathname === '/map';
   const ideasActive = pathname === '/ideas';
   const auditActive = pathname === '/audit';
+  const adminUsersActive = pathname === '/admin/users';
 
   const email = user?.email ?? '';
 
@@ -107,18 +109,34 @@ export function MainAppBar() {
           >
             Идеи
           </Button>
-          <Button
-            component={RouterLink}
-            to="/audit"
-            color="inherit"
-            size="small"
-            sx={{
-              fontWeight: auditActive ? 600 : 400,
-              ...(auditActive && { bgcolor: 'action.selected' }),
-            }}
-          >
-            Аудит
-          </Button>
+          {canManageUsers(user?.role) ? (
+            <Button
+              component={RouterLink}
+              to="/admin/users"
+              color="inherit"
+              size="small"
+              sx={{
+                fontWeight: adminUsersActive ? 600 : 400,
+                ...(adminUsersActive && { bgcolor: 'action.selected' }),
+              }}
+            >
+              Пользователи
+            </Button>
+          ) : null}
+          {canAccessAudit(user?.role) ? (
+            <Button
+              component={RouterLink}
+              to="/audit"
+              color="inherit"
+              size="small"
+              sx={{
+                fontWeight: auditActive ? 600 : 400,
+                ...(auditActive && { bgcolor: 'action.selected' }),
+              }}
+            >
+              Аудит
+            </Button>
+          ) : null}
         </Stack>
         <Box sx={{ flexGrow: 1 }} />
         {email ? (

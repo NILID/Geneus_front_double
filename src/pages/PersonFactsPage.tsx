@@ -9,6 +9,8 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import { fetchPerson, personDisplayName, type PersonDetail } from '../api/personApi';
 import { fetchPersonFacts, type PersonFact } from '../api/personFactsApi';
+import { useAuth } from '../auth/AuthContext';
+import { canEditGenealogy } from '../auth/roles';
 import { AddPersonFactForm, PersonFactsList } from '../components/PersonFactsWidgets';
 import { PersonProfileShell } from '../components/PersonProfileShell';
 import { SessionLoading } from '../components/SessionLoading';
@@ -16,6 +18,8 @@ import { buildFamilyTreeHref } from '../lib/familyChartNavigation';
 
 export function PersonFactsPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const canEdit = canEditGenealogy(user?.role);
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [facts, setFacts] = useState<PersonFact[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +103,7 @@ export function PersonFactsPage() {
       activeTab="facts"
       breadcrumbs={breadcrumbs}
       familyTreeTo={buildFamilyTreeHref(person)}
+      showEditProfileButton={canEdit}
     >
       <Paper
         elevation={0}
@@ -112,11 +117,8 @@ export function PersonFactsPage() {
         <Typography variant="h6" component="h2" sx={{ px: 2, py: 1.5, bgcolor: 'action.hover', fontWeight: 700 }}>
           Все факты
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ px: 2, pt: 2, pb: 0 }}>
-          Любой зарегистрированный пользователь может добавить факт. Список отсортирован от новых к старым.
-        </Typography>
         <Typography component="div" sx={{ p: 2 }}>
-          <AddPersonFactForm personId={id} onAdded={reloadAll} />
+          {canEdit ? <AddPersonFactForm personId={id} onAdded={reloadAll} /> : null}
           <PersonFactsList facts={facts} />
         </Typography>
       </Paper>

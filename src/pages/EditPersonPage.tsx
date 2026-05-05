@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, Navigate, useNavigate, useParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
@@ -32,6 +32,7 @@ import { extractGenealogyYear } from '../lib/genealogyDateFormat';
 import { buildFamilyTreeHref } from '../lib/familyChartNavigation';
 import { resolvePlaceCoordinates } from '../lib/osmGeocode';
 import { SessionLoading } from '../components/SessionLoading';
+import { useAuth } from '../auth/AuthContext';
 
 function isoToDateInput(iso: string | null | undefined): string {
   if (!iso) {
@@ -50,6 +51,7 @@ const LOCATION_HELPER =
 
 export function EditPersonPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -312,6 +314,10 @@ export function EditPersonPage() {
         </Button>
       </Container>
     );
+  }
+
+  if (user?.role === 'user') {
+    return <Navigate to={`/person/${encodeURIComponent(id)}`} replace />;
   }
 
   const breadcrumbs = (

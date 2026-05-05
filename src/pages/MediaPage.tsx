@@ -25,6 +25,7 @@ import {
   type GalleryPhoto,
 } from '../api/galleryPhotoApi';
 import { useAuth } from '../auth/AuthContext';
+import { canEditGenealogy } from '../auth/roles';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
 import { SessionLoading } from '../components/SessionLoading';
 import { chartPeopleAsTagOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
@@ -43,6 +44,7 @@ function distinctTakenYears(photos: GalleryPhoto[]): number[] {
 
 export function MediaPage() {
   const { user } = useAuth();
+  const canEdit = canEditGenealogy(user?.role);
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
   const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
@@ -238,15 +240,11 @@ export function MediaPage() {
   return (
     <Container maxWidth="lg" sx={{ py: 2, px: { xs: 1, sm: 2 } }}>
       <Stack spacing={2}>
+        {canEdit ? (
         <Paper elevation={2} sx={{ p: 2 }}>
           <Typography variant="h1" component="h1" align="center" gutterBottom>
             Медиа
           </Typography>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
-            Общая галерея: все вошедшие пользователи видят фотографии друг друга. Редактировать, отмечать
-            персон и удалять можно только свои снимки (список персон для отметок берётся из семейного древа).
-          </Typography>
-
           <Stack
             spacing={2}
             sx={{
@@ -292,8 +290,8 @@ export function MediaPage() {
               {uploading ? 'Загрузка…' : 'Выбрать фото'}
             </Button>
           </Stack>
-        </Paper>
-
+         </Paper>
+        ) : null}
         {loading && <SessionLoading message="Загружаем медиатеку…" />}
         {error && (
           <Alert severity="error" role="alert">
@@ -303,7 +301,7 @@ export function MediaPage() {
 
         {!loading && photos.length === 0 && !error && (
           <Typography color="text.secondary" align="center">
-            Пока нет фотографий — загрузите первую.
+            {canEdit ? 'Пока нет фотографий — загрузите первую.' : 'Пока нет фотографий.'}
           </Typography>
         )}
 
@@ -359,20 +357,26 @@ export function MediaPage() {
               prev.map((p) => (p.id === photoId ? { ...p, comments_count: commentsCount } : p)),
             );
           }}
-          onEdit={(item) => {
-            setEditPhoto(item as GalleryPhoto);
-            setEditCaption(item.caption ?? '');
-            setEditTakenYear(
-              item.taken_year != null && !Number.isNaN(item.taken_year) ? String(item.taken_year) : '',
-            );
-            setEditFile(null);
-            setEditTagIds((item.tagged_people ?? []).map((p) => p.id));
-            setEditError(null);
-            if (editFileInputRef.current) {
-              editFileInputRef.current.value = '';
-            }
-          }}
-          onDelete={(id) => void handleDelete(id)}
+          onEdit={
+            canEdit
+              ? (item) => {
+                  setEditPhoto(item as GalleryPhoto);
+                  setEditCaption(item.caption ?? '');
+                  setEditTakenYear(
+                    item.taken_year != null && !Number.isNaN(item.taken_year)
+                      ? String(item.taken_year)
+                      : '',
+                  );
+                  setEditFile(null);
+                  setEditTagIds((item.tagged_people ?? []).map((p) => p.id));
+                  setEditError(null);
+                  if (editFileInputRef.current) {
+                    editFileInputRef.current.value = '';
+                  }
+                }
+              : undefined
+          }
+          onDelete={canEdit ? (photoId) => void handleDelete(photoId) : undefined}
         />
       </Stack>
 

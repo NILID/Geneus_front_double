@@ -45,6 +45,8 @@ export type FamilyChartEditorProps = {
   onOpenPersonPage?: (personId: string) => void;
   /** Chart node `id` passed to {@link https://github.com/donatso/family-chart `updateMainId`} (корень древа). */
   mainNodeId: string;
+  /** Только просмотр: без редактирования древа и без сохранения на сервер. */
+  readOnly?: boolean;
 } & FamilyChartEditCallbacks;
 
 /** Matches `family-chart` `setCardDisplay`: field groups, field names, or formatters. */
@@ -178,6 +180,7 @@ export function FamilyChartEditor({
   remountKey = 0,
   onOpenPersonPage,
   mainNodeId,
+  readOnly = false,
 }: FamilyChartEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<
@@ -270,7 +273,11 @@ export function FamilyChartEditor({
     el.innerHTML = '';
 
     const chart = f3.createChart(el, data);
-    chart.setSingleParentEmptyCard(true, { label: 'Добавить' });
+    if (readOnly) {
+      chart.setSingleParentEmptyCard(false);
+    } else {
+      chart.setSingleParentEmptyCard(true, { label: 'Добавить' });
+    }
     (chart.store.state as Record<string, unknown>).unknown_card_label = 'Неизвестно';
     const card = chart.setCardHtml();
     card.setCardDisplay(cardDisplay);
@@ -317,43 +324,47 @@ export function FamilyChartEditor({
       cardEl.appendChild(a);
     });
 
-    const editTree = chart
-      .editTree()
-      .setAddRelLabels(
-        {
-          father: 'Отец',
-          mother: 'Мать',
-          spouse: 'Супруг(а)',
-          son: 'Сын',
-          daughter: 'Дочь',
-        }
-      )
-      .setFields(editFields)
-      .setPostSubmit(() => {
-        void persistLatestTree();
-      })
-      .setOnChange(() => {
-        const et = editTreeRef.current;
-        if (!et) return;
-        const raw = et.exportData() as FamilyChartData;
-        const prev = lastExportRef.current;
-        lastExportRef.current = raw;
-        const { added, removed } = diffPersonIds(prev, raw);
-        removed.forEach((id) => removedIdsRef.current.add(id));
+    if (!readOnly) {
+      const editTree = chart
+        .editTree()
+        .setAddRelLabels(
+          {
+            father: 'Отец',
+            mother: 'Мать',
+            spouse: 'Супруг(а)',
+            son: 'Сын',
+            daughter: 'Дочь',
+          }
+        )
+        .setFields(editFields)
+        .setPostSubmit(() => {
+          void persistLatestTree();
+        })
+        .setOnChange(() => {
+          const et = editTreeRef.current;
+          if (!et) return;
+          const raw = et.exportData() as FamilyChartData;
+          const prev = lastExportRef.current;
+          lastExportRef.current = raw;
+          const { added, removed } = diffPersonIds(prev, raw);
+          removed.forEach((id) => removedIdsRef.current.add(id));
 
-        internalChangeRef.current = true;
-        callbacksRef.current.onDataChange(raw);
-        callbacksRef.current.onUpdate?.(raw);
-        if (added.length) {
-          callbacksRef.current.onAdd?.(raw, added);
-        }
-        if (removed.length) {
-          callbacksRef.current.onRemove?.(raw, removed);
-        }
-      })
-      .setCardClickOpen(card);
+          internalChangeRef.current = true;
+          callbacksRef.current.onDataChange(raw);
+          callbacksRef.current.onUpdate?.(raw);
+          if (added.length) {
+            callbacksRef.current.onAdd?.(raw, added);
+          }
+          if (removed.length) {
+            callbacksRef.current.onRemove?.(raw, removed);
+          }
+        })
+        .setCardClickOpen(card);
 
-    editTreeRef.current = editTree;
+      editTreeRef.current = editTree;
+    } else {
+      editTreeRef.current = null;
+    }
     chartRef.current = chart;
     createdForKeyRef.current = remountKey;
     lastExportRef.current = data;
@@ -368,7 +379,7 @@ export function FamilyChartEditor({
 
     return () => {
       stopRussianUi();
-      editTree.destroy();
+      editTreeRef.current?.destroy();
       el.innerHTML = '';
       chartRef.current = undefined;
       editTreeRef.current = null;
@@ -379,7 +390,7 @@ export function FamilyChartEditor({
       appliedMainNodeIdRef.current = null;
     };
     // mainNodeIdRef всегда актуален; смена только корня без пересоздания графа — отдельный эффект ниже.
-  }, [data, remountKey, cardDisplay, editFields, persistLatestTree]);
+  }, [data, remountKey, cardDisplay, editFields, persistLatestTree, readOnly]);
 
   useEffect(() => {
     if (!chartRef.current) {
@@ -419,6 +430,26 @@ export function FamilyChartEditor({
   };
 
   if (data.length === 0) {
+    if (readOnly) {
+      return (
+        <Box
+          className="f3 chart-container"
+          id="FamilyChart"
+          data-testid="family-chart-empty-readonly"
+          sx={{
+            ...chartAreaSx,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            px: 2,
+          }}
+        >
+          <Alert severity="info" sx={{ maxWidth: 480 }}>
+            В базе пока нет персон для отображения древа.
+          </Alert>
+        </Box>
+      );
+    }
     return (
       <Box
         className="f3 chart-container"

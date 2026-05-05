@@ -1,4 +1,6 @@
 import { getStoredToken, readBearerFromResponse, setStoredToken } from './storage';
+import type { UserRole } from './roles';
+import { parseUserRole } from './roles';
 
 /** Same-origin default (CRA proxy → Rails). Override with e.g. http://localhost:3001 */
 export const API_BASE =
@@ -9,6 +11,7 @@ export interface AuthUser {
   email: string;
   /** Персона древа, с которой связана учётная запись (если задана). */
   person_id: number | null;
+  role: UserRole;
 }
 
 function parseAuthUserPayload(data: unknown): AuthUser {
@@ -22,7 +25,12 @@ function parseAuthUserPayload(data: unknown): AuthUser {
     const n = Number(pid);
     person_id = Number.isFinite(n) && n > 0 ? n : null;
   }
-  return { id: Number(o.id), email: String(o.email), person_id };
+  return {
+    id: Number(o.id),
+    email: String(o.email),
+    person_id,
+    role: parseUserRole(o.role),
+  };
 }
 
 function buildHeaders(includeJsonBody: boolean, withAuth: boolean): Headers {

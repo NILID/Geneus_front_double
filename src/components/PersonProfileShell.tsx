@@ -31,6 +31,7 @@ export function PersonProfileShell({
   activeTab,
   breadcrumbs,
   familyTreeTo,
+  showEditProfileButton = true,
   children,
 }: {
   person: PersonDetail;
@@ -39,6 +40,8 @@ export function PersonProfileShell({
   breadcrumbs: React.ReactNode;
   /** Ссылка на древо с корнем в этой персоне (`/tree?...`). */
   familyTreeTo?: string;
+  /** Показывать кнопку «Изменить» (редактирование карточки персоны). */
+  showEditProfileButton?: boolean;
   children: React.ReactNode;
 }) {
   const base = `/person/${encodeURIComponent(personId)}`;
@@ -142,15 +145,17 @@ export function PersonProfileShell({
                     <AccountTree fontSize="small" />
                   </Button>
                 ) : null}
-                <Button
-                  component={RouterLink}
-                  to={`${base}/edit`}
-                  variant="contained"
-                  size="medium"
-                  sx={{ textTransform: 'none', fontWeight: 600 }}
-                >
-                  Изменить
-                </Button>
+                {showEditProfileButton ? (
+                  <Button
+                    component={RouterLink}
+                    to={`${base}/edit`}
+                    variant="contained"
+                    size="medium"
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  >
+                    Изменить
+                  </Button>
+                ) : null}
               </Stack>
             </Stack>
 

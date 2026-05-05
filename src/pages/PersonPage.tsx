@@ -25,6 +25,7 @@ import {
 } from '../api/personApi';
 import { fetchPersonFacts, type PersonFact } from '../api/personFactsApi';
 import { useAuth } from '../auth/AuthContext';
+import { canEditGenealogy } from '../auth/roles';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
 import { AddPersonFactForm, PersonFactsPeekList } from '../components/PersonFactsWidgets';
 import { PersonProfileShell } from '../components/PersonProfileShell';
@@ -126,6 +127,7 @@ function PersonDetailRow({ label, value }: { label: string; value: React.ReactNo
 export function PersonPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const canEdit = canEditGenealogy(user?.role);
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -262,6 +264,7 @@ export function PersonPage() {
       activeTab="overview"
       breadcrumbs={breadcrumbs}
       familyTreeTo={buildFamilyTreeHref(person)}
+      showEditProfileButton={canEdit}
     >
       <>
       <Box
@@ -327,7 +330,7 @@ export function PersonPage() {
           <ProfileSectionCard
             title="Факты"
             headerRight={
-              id ? (
+              id && canEdit ? (
                 <IconButton
                   size="small"
                   aria-label="Добавить факт"
@@ -344,6 +347,12 @@ export function PersonPage() {
             {factsLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress size={28} aria-label="Загрузка фактов" />
+              </Box>
+            ) : personFacts.length === 0 && !canEdit ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Пока нет фактов
+                </Typography>
               </Box>
             ) : personFacts.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>

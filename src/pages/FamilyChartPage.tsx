@@ -13,10 +13,12 @@ import { SessionLoading } from '../components/SessionLoading';
 import { fetchFamilyChart, type FamilyChartData } from '../familyChartApi';
 import { useAuth } from '../auth/AuthContext';
 import { pickFirstChartNodeId, resolveFamilyTreeMainNode } from '../lib/familyChartNavigation';
+import { canEditGenealogy } from '../auth/roles';
 
 export function FamilyChartPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const treeReadOnly = !canEditGenealogy(user?.role);
   const [searchParams] = useSearchParams();
   const mainParam = searchParams.get('main');
   const personParam = searchParams.get('person');
@@ -109,6 +111,7 @@ export function FamilyChartPage() {
             data={treeData}
             remountKey={chartGeneration}
             mainNodeId={treeMainNodeId}
+            readOnly={treeReadOnly}
             onDataChange={setTreeData}
             onPersistedData={handlePersistedData}
             onUpdate={(data) => appendLog(`Изменения (${data.length} человек в древе)`)}
@@ -124,7 +127,7 @@ export function FamilyChartPage() {
           />
         )}
 
-        {eventLog.length > 0 && (
+        {eventLog.length > 0 && !treeReadOnly && (
           <Paper elevation={1} sx={{ p: 2 }} aria-label="Журнал правок древа">
             <Typography variant="h2" component="h2" gutterBottom>
               Последние действия

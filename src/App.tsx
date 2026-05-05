@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import './App.css';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { AuthenticatedLayout } from './components/AuthenticatedLayout';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
 import { FamilyChartPage } from './pages/FamilyChartPage';
 import { EditPersonPage } from './pages/EditPersonPage';
@@ -19,6 +19,7 @@ import { MapPage } from './pages/MapPage';
 import { IdeasPage } from './pages/IdeasPage';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { UsersAdminPage } from './pages/UsersAdminPage';
 import { SessionLoading } from './components/SessionLoading';
 
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
@@ -138,6 +139,18 @@ function AppRoutes() {
             <AuthenticatedLayout>
               <AuditLogPage />
             </AuthenticatedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AuthenticatedLayout>
+                <UsersAdminPage />
+              </AuthenticatedLayout>
+            </AdminRoute>
           </ProtectedRoute>
         }
       />
