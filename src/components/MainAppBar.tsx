@@ -28,6 +28,7 @@ export function MainAppBar() {
   const mediaActive = pathname === '/media';
   const mapActive = pathname === '/map';
   const ideasActive = pathname === '/ideas';
+  const auditActive = pathname === '/audit';
 
   const email = user?.email ?? '';
 
@@ -105,6 +106,18 @@ export function MainAppBar() {
             }}
           >
             Идеи
+          </Button>
+          <Button
+            component={RouterLink}
+            to="/audit"
+            color="inherit"
+            size="small"
+            sx={{
+              fontWeight: auditActive ? 600 : 400,
+              ...(auditActive && { bgcolor: 'action.selected' }),
+            }}
+          >
+            Аудит
           </Button>
         </Stack>
         <Box sx={{ flexGrow: 1 }} />

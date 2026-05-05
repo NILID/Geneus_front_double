@@ -502,7 +502,7 @@ export function HomePage() {
                     Древо
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    связи и редактирование
+                    изучай своих родных
                   </Typography>
                 </Box>
               </Stack>
@@ -556,7 +556,7 @@ export function HomePage() {
                     Карта
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    места рождения и смерти
+                    значимые места
                   </Typography>
                 </Box>
               </Stack>

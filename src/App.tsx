@@ -18,6 +18,7 @@ import { MediaPage } from './pages/MediaPage';
 import { MapPage } from './pages/MapPage';
 import { IdeasPage } from './pages/IdeasPage';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
+import { AuditLogPage } from './pages/AuditLogPage';
 import { SessionLoading } from './components/SessionLoading';
 
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
@@ -126,6 +127,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AuthenticatedLayout>
               <IdeasPage />
+            </AuthenticatedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <AuthenticatedLayout>
+              <AuditLogPage />
             </AuthenticatedLayout>
           </ProtectedRoute>
         }
