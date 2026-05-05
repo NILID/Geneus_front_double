@@ -6,6 +6,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import type { SxProps, Theme } from '@mui/material/styles';
 import {
   MAX_COMMENT_BODY,
   createGalleryPhotoComment,
@@ -27,17 +28,23 @@ function formatWhen(iso: string): string {
   }
 }
 
-export interface GalleryPhotoFancyboxCommentsProps {
+export interface GalleryPhotoCommentsPanelProps {
   photoId: number;
   currentUserId?: number | null;
   onCommentsCountChange?: (photoId: number, commentsCount: number) => void;
+  /** Дополнительные стили корневого контейнера (например, flex в боковой панели просмотра) */
+  sx?: SxProps<Theme>;
+  /** Тёмная панель в полноэкранном просмотре — контрастные поля и карточки комментариев */
+  surface?: 'light' | 'dark';
 }
 
-export function GalleryPhotoFancyboxComments({
+export function GalleryPhotoCommentsPanel({
   photoId,
   currentUserId,
   onCommentsCountChange,
-}: GalleryPhotoFancyboxCommentsProps) {
+  sx: sxProp,
+  surface = 'light',
+}: GalleryPhotoCommentsPanelProps) {
   const [comments, setComments] = useState<GalleryPhotoComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -88,39 +95,68 @@ export function GalleryPhotoFancyboxComments({
     }
   }
 
+  const dark = surface === 'dark';
+
   return (
     <Box
       sx={{
         px: 2,
         py: 1.5,
-        maxHeight: '38vh',
-        overflowY: 'auto',
-        borderTop: 1,
+        maxHeight: dark ? 'none' : '38vh',
+        flex: dark ? '1 1 auto' : undefined,
+        minHeight: dark ? 0 : undefined,
+        display: dark ? 'flex' : undefined,
+        flexDirection: dark ? 'column' : undefined,
+        overflowY: dark ? 'hidden' : 'auto',
+        borderTop: dark ? 0 : 1,
         borderColor: 'divider',
-        bgcolor: 'background.paper',
+        bgcolor: dark ? 'transparent' : 'background.paper',
+        color: dark ? 'grey.200' : undefined,
+        ...sxProp,
       }}
     >
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>
         Комментарии
       </Typography>
 
       {loading ? (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" color={dark ? 'grey.400' : 'text.secondary'} sx={{ mb: 1, flexShrink: 0 }}>
           Загрузка…
         </Typography>
       ) : loadError ? (
-        <Alert severity="error" sx={{ mb: 1 }}>
+        <Alert severity="error" sx={{ mb: 1, flexShrink: 0 }}>
           {loadError}
         </Alert>
       ) : comments.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" color={dark ? 'grey.500' : 'text.secondary'} sx={{ mb: 1, flexShrink: 0 }}>
           Пока нет комментариев.
         </Typography>
       ) : (
-        <Stack spacing={1} sx={{ mb: 2 }}>
+        <Stack
+          spacing={1}
+          sx={{
+            mb: 2,
+            flex: dark ? '1 1 auto' : undefined,
+            minHeight: dark ? 0 : undefined,
+            overflowY: dark ? 'auto' : undefined,
+            pr: dark ? 0.5 : undefined,
+          }}
+        >
           {comments.map((c) => (
-            <Paper key={c.id} variant="outlined" sx={{ p: 1, bgcolor: 'action.hover' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+            <Paper
+              key={c.id}
+              variant="outlined"
+              sx={{
+                p: 1,
+                bgcolor: dark ? 'grey.800' : 'action.hover',
+                borderColor: dark ? 'grey.700' : undefined,
+              }}
+            >
+              <Typography
+                variant="caption"
+                color={dark ? 'grey.500' : 'text.secondary'}
+                sx={{ display: 'block', mb: 0.5 }}
+              >
                 {`${formatWhen(c.created_at)}${c.author_email ? ` · ${c.author_email}` : ''}${
                   currentUserId != null && c.user_id === currentUserId ? ' · вы' : ''
                 }`}
@@ -128,7 +164,7 @@ export function GalleryPhotoFancyboxComments({
               <Typography
                 variant="body2"
                 component="div"
-                sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: dark ? 'grey.100' : undefined }}
               >
                 {c.body}
               </Typography>
@@ -137,7 +173,11 @@ export function GalleryPhotoFancyboxComments({
         </Stack>
       )}
 
-      <Box component="form" onSubmit={(ev) => void handleSubmit(ev)}>
+      <Box
+        component="form"
+        onSubmit={(ev) => void handleSubmit(ev)}
+        sx={{ flexShrink: 0, mt: dark ? 'auto' : undefined, pt: dark ? 1 : undefined }}
+      >
         <Stack spacing={1}>
           {formError ? <Alert severity="error">{formError}</Alert> : null}
           <TextField
@@ -150,6 +190,18 @@ export function GalleryPhotoFancyboxComments({
             size="small"
             slotProps={{ htmlInput: { maxLength: MAX_COMMENT_BODY } }}
             helperText={`${draft.length} / ${MAX_COMMENT_BODY}`}
+            sx={
+              dark
+                ? {
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: 'grey.800',
+                      color: 'grey.100',
+                    },
+                    '& .MuiInputLabel-root': { color: 'grey.500' },
+                    '& .MuiFormHelperText-root': { color: 'grey.600' },
+                  }
+                : undefined
+            }
           />
           <Button type="submit" variant="contained" size="small" disabled={submitting}>
             {submitting ? 'Отправка…' : 'Отправить'}

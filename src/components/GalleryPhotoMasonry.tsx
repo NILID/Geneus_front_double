@@ -1,38 +1,20 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { Fancybox } from '@fancyapps/ui/dist/fancybox/';
-import type { CarouselInstance } from '@fancyapps/ui/dist/carousel/carousel';
-import type { FancyboxInstance } from '@fancyapps/ui/dist/fancybox/fancybox';
+import React, { useId, useState } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import ImageList from '@mui/material/ImageList';
 import ImageListItem from '@mui/material/ImageListItem';
 import ImageListItemBar from '@mui/material/ImageListItemBar';
-import Link from '@mui/material/Link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
-import { ThemeProvider, useTheme } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
 
-import { type GalleryTaggedPerson } from '../api/galleryPhotoApi';
-import { personDisplayName } from '../api/personApi';
-import useFancybox from '../hooks/useFancybox';
-import { GalleryPhotoFancyboxComments } from './GalleryPhotoFancyboxComments';
+import type { GalleryMasonryItem } from '../api/galleryPhotoApi';
+import { GalleryPhotoTaggedPeopleLinks } from './GalleryPhotoTaggedPeople';
+import { GalleryPhotoViewerModal } from './GalleryPhotoViewerModal';
 
-export interface GalleryMasonryItem {
-  id: number;
-  caption: string | null;
-  taken_year?: number | null;
-  image_url: string | null;
-  created_at: string;
-  uploaded_by_email?: string | null;
-  tagged_people?: GalleryTaggedPerson[];
-  user_id?: number;
-  comments_count?: number;
-}
+export type { GalleryMasonryItem } from '../api/galleryPhotoApi';
 
 function GearIcon(props: SvgIconProps) {
   return (
@@ -104,87 +86,8 @@ function OwnerPhotoMenu({
   );
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function personPath(id: number): string {
-  return `/person/${encodeURIComponent(String(id))}`;
-}
-
-function fancyCaptionHtmlForItem(item: GalleryMasonryItem): string {
-  const cap = item.caption?.trim() ? escapeHtml(item.caption) : 'Без подписи';
-  const parts: string[] = [cap];
-  if (item.taken_year != null && !Number.isNaN(item.taken_year)) {
-    parts.push(`Год съёмки: ${escapeHtml(String(item.taken_year))}`);
-  }
-  if (item.uploaded_by_email !== undefined) {
-    parts.push(escapeHtml(item.uploaded_by_email ?? 'Неизвестно'));
-  }
-  parts.push(escapeHtml(new Date(item.created_at).toLocaleString()));
-  const tagged = item.tagged_people;
-  if (tagged && tagged.length > 0) {
-    const links = tagged
-      .map(
-        (p) =>
-          `<a href="${escapeHtml(personPath(p.id))}">${escapeHtml(personDisplayName(p))}</a>`,
-      )
-      .join(', ');
-    parts.push(`На фото: ${links}`);
-  }
-  const cc = item.comments_count ?? 0;
-  parts.push(`Комментариев: ${cc}`);
-  return parts.filter((s) => s !== '').join(' · ');
-}
-
-function TaggedPeopleSubtitle({ tagged }: { tagged: GalleryTaggedPerson[] }) {
-  if (tagged.length === 0) {
-    return null;
-  }
-  return (
-    <Box component="span" sx={{ display: 'block' }}>
-      На фото:{' '}
-      {tagged.map((p, i) => (
-        <React.Fragment key={p.id}>
-          {i > 0 ? ', ' : null}
-          <Link
-            component={RouterLink}
-            to={personPath(p.id)}
-            color="inherit"
-            variant="inherit"
-            underline="hover"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {personDisplayName(p)}
-          </Link>
-        </React.Fragment>
-      ))}
-    </Box>
-  );
-}
-
-function readGalleryPhotoIdFromTrigger(trigger: unknown): number | null {
-  if (!(trigger instanceof Element)) {
-    return null;
-  }
-  const a = trigger.closest('a[data-gallery-photo-id]');
-  if (!(a instanceof HTMLAnchorElement)) {
-    return null;
-  }
-  const raw = a.dataset.galleryPhotoId ?? '';
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
 export interface GalleryPhotoMasonryProps {
   photos: GalleryMasonryItem[];
-  /** Значение `data-fancybox` — группа слайдов в лайтбоксе */
-  fancyboxGroup: string;
   cols: number;
   gap?: number;
   /** Заголовок над сеткой (например, на странице персоны) */
@@ -194,14 +97,13 @@ export interface GalleryPhotoMasonryProps {
   onDelete?: (id: number) => void;
   /** Префикс для id меню (уникальность при нескольких галереях на странице) */
   menuIdPrefix?: string;
-  /** После добавления комментария в Fancybox — обновить счётчик в родительском состоянии */
+  /** После добавления комментария в просмотре — обновить счётчик в родительском состоянии */
   onGalleryPhotoCommentsCountChange?: (photoId: number, commentsCount: number) => void;
   sx?: SxProps<Theme>;
 }
 
 export function GalleryPhotoMasonry({
   photos,
-  fancyboxGroup,
   cols,
   gap = 12,
   title,
@@ -213,132 +115,8 @@ export function GalleryPhotoMasonry({
   sx,
 }: GalleryPhotoMasonryProps) {
   const reactId = useId();
-  const navigate = useNavigate();
-  const theme = useTheme();
-  const themeRef = useRef(theme);
-  themeRef.current = theme;
-
-  const onCountRef = useRef(onGalleryPhotoCommentsCountChange);
-  useEffect(() => {
-    onCountRef.current = onGalleryPhotoCommentsCountChange;
-  }, [onGalleryPhotoCommentsCountChange]);
-
-  const userIdRef = useRef(currentUserId);
-  useEffect(() => {
-    userIdRef.current = currentUserId;
-  }, [currentUserId]);
-
-  const fancyMountRef = useRef<{
-    root: Root | null;
-    host: HTMLDivElement | null;
-    container: HTMLElement | null;
-  }>({ root: null, host: null, container: null });
-
-  const teardownFancyboxComments = () => {
-    const m = fancyMountRef.current;
-    m.root?.unmount();
-    m.root = null;
-    m.host?.remove();
-    m.host = null;
-    m.container = null;
-  };
-
-  const renderFancyboxComments = (fancybox: FancyboxInstance, photoId: number) => {
-    const container = fancybox.getContainer();
-    if (!container) {
-      return;
-    }
-    const m = fancyMountRef.current;
-    if (m.container !== container) {
-      teardownFancyboxComments();
-    }
-    fancyMountRef.current.container = container;
-
-    let host = container.querySelector<HTMLDivElement>('.gallery-fb-comments-host');
-    if (!host) {
-      host = document.createElement('div');
-      host.className = 'gallery-fb-comments-host';
-      host.style.width = '100%';
-      host.style.flexShrink = '0';
-      container.appendChild(host);
-      fancyMountRef.current.host = host;
-      fancyMountRef.current.root = createRoot(host);
-    } else {
-      fancyMountRef.current.host = host;
-      if (!fancyMountRef.current.root) {
-        fancyMountRef.current.root = createRoot(host);
-      }
-    }
-
-    fancyMountRef.current.root!.render(
-      <ThemeProvider theme={themeRef.current}>
-        <GalleryPhotoFancyboxComments
-          key={photoId}
-          photoId={photoId}
-          currentUserId={userIdRef.current}
-          onCommentsCountChange={(id, count) => onCountRef.current?.(id, count)}
-        />
-      </ThemeProvider>,
-    );
-  };
-
-  const syncCommentsPanel = (fancybox: FancyboxInstance) => {
-    const carousel = fancybox.getCarousel();
-    if (!carousel) {
-      teardownFancyboxComments();
-      return;
-    }
-    const page = carousel.getPage();
-    const slide = page?.slides?.[0];
-    const id = readGalleryPhotoIdFromTrigger(slide?.triggerEl);
-    if (id != null) {
-      renderFancyboxComments(fancybox, id);
-    } else {
-      teardownFancyboxComments();
-    }
-  };
-
-  const fancyboxOptions = useMemo(
-    () => ({
-      on: {
-        ready: (fancybox: FancyboxInstance) => {
-          syncCommentsPanel(fancybox);
-        },
-        'Carousel.change': (fancybox: FancyboxInstance, _carousel: CarouselInstance) => {
-          syncCommentsPanel(fancybox);
-        },
-        destroy: () => {
-          teardownFancyboxComments();
-        },
-      },
-    }),
-    [],
-  );
-
-  const [setFancyboxRoot] = useFancybox(fancyboxOptions);
-
-  useEffect(() => {
-    const onClickCapture = (e: MouseEvent) => {
-      const t = e.target;
-      if (!(t instanceof Element)) {
-        return;
-      }
-      const a = t.closest('a[href^="/person/"]');
-      if (!(a instanceof HTMLAnchorElement) || !a.closest('.fancybox__dialog')) {
-        return;
-      }
-      const href = a.getAttribute('href');
-      if (!href?.startsWith('/person/')) {
-        return;
-      }
-      e.preventDefault();
-      e.stopPropagation();
-      void Fancybox.close();
-      navigate(href);
-    };
-    document.addEventListener('click', onClickCapture, true);
-    return () => document.removeEventListener('click', onClickCapture, true);
-  }, [navigate]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   if (photos.length === 0) {
     return null;
@@ -347,16 +125,24 @@ export function GalleryPhotoMasonry({
   const canManage = Boolean(onEdit && onDelete && currentUserId != null);
 
   return (
-    <Box ref={setFancyboxRoot} sx={sx}>
+    <Box sx={sx}>
+      <GalleryPhotoViewerModal
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        photos={photos}
+        index={viewerIndex}
+        onIndexChange={setViewerIndex}
+        currentUserId={currentUserId}
+        onCommentsCountChange={onGalleryPhotoCommentsCountChange}
+      />
       {title}
       <ImageList variant="masonry" cols={cols} gap={gap} sx={{ width: '100%', mb: 0 }}>
-        {photos.map((item) => {
-          const fancyCaptionHtml = fancyCaptionHtmlForItem(item);
+        {photos.map((item, photoIndex) => {
           const tagged = item.tagged_people ?? [];
           const commentCount = item.comments_count ?? 0;
           const subtitleNode = (
             <Box component="span" sx={{ display: 'block' }}>
-              {tagged.length > 0 ? <TaggedPeopleSubtitle tagged={tagged} /> : null}
+              {tagged.length > 0 ? <GalleryPhotoTaggedPeopleLinks tagged={tagged} /> : null}
               <Box
                 component="span"
                 sx={{
@@ -383,16 +169,26 @@ export function GalleryPhotoMasonry({
           return (
             <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
               {item.image_url ? (
-                <a
-                  href={item.image_url}
-                  data-fancybox={fancyboxGroup}
-                  data-caption={fancyCaptionHtml}
-                  data-gallery-photo-id={String(item.id)}
-                  style={{
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => {
+                    setViewerIndex(photoIndex);
+                    setViewerOpen(true);
+                  }}
+                  aria-label="Открыть фото"
+                  sx={{
                     display: 'block',
-                    textDecoration: 'none',
-                    color: 'inherit',
+                    width: '100%',
+                    p: 0,
+                    m: 0,
+                    border: 0,
+                    bgcolor: 'transparent',
+                    cursor: 'pointer',
                     lineHeight: 0,
+                    color: 'inherit',
+                    font: 'inherit',
+                    textAlign: 'left',
                   }}
                 >
                   <img
@@ -401,7 +197,7 @@ export function GalleryPhotoMasonry({
                     loading="lazy"
                     style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
                   />
-                </a>
+                </Box>
               ) : (
                 <Box sx={{ minHeight: 120, bgcolor: 'action.hover' }} />
               )}

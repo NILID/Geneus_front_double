@@ -346,7 +346,6 @@ export function MediaPage() {
 
         <GalleryPhotoMasonry
           photos={filteredPhotos}
-          fancyboxGroup="gallery"
           cols={galleryCols}
           gap={12}
           sx={{ width: '100%' }}

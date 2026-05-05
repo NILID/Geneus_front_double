@@ -371,7 +371,6 @@ export function PersonPage() {
             </Typography>
             <GalleryPhotoMasonry
               photos={person.tagged_gallery_photos}
-              fancyboxGroup={`person-${person.id}`}
               cols={3}
               gap={10}
               sx={{ width: '100%' }}

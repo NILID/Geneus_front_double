@@ -14,6 +14,19 @@ export interface GalleryTaggedPerson {
   last_name: string | null;
 }
 
+/** Элемент сетки галереи и полноэкранного просмотра */
+export interface GalleryMasonryItem {
+  id: number;
+  caption: string | null;
+  taken_year?: number | null;
+  image_url: string | null;
+  created_at: string;
+  uploaded_by_email?: string | null;
+  tagged_people?: GalleryTaggedPerson[];
+  user_id?: number;
+  comments_count?: number;
+}
+
 export interface GalleryPhoto {
   id: number;
   user_id: number;
