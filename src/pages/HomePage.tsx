@@ -21,7 +21,12 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
+import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import { createInvitationLinkRequest, sendInvitationRequest } from '../auth/authApi';
 import { fetchGalleryPhotos, type GalleryPhoto } from '../api/galleryPhotoApi';
 import { fetchIdeas, type Idea } from '../api/ideaApi';
@@ -79,25 +84,23 @@ function truncateText(text: string, max = 160): string {
   return `${t.slice(0, max).trim()}…`;
 }
 
-function NavTileGlyph({ label }: { label: string }) {
+function NavTileIcon({ children }: { children: React.ReactNode }) {
   return (
     <Box
       aria-hidden
-      sx={{
+      sx={(theme) => ({
         width: 40,
         height: 40,
         borderRadius: 1,
-        bgcolor: 'primary.main',
-        opacity: 0.2,
+        bgcolor: alpha(theme.palette.primary.main, 0.2),
         display: 'grid',
         placeItems: 'center',
-        color: 'primary.light',
-        fontSize: '0.95rem',
-        fontWeight: 700,
+        color: 'primary.main',
         flexShrink: 0,
-      }}
+        '& .MuiSvgIcon-root': { fontSize: 22 },
+      })}
     >
-      {label}
+      {children}
     </Box>
   );
 }
@@ -496,7 +499,9 @@ export function HomePage() {
               }}
             >
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileGlyph label="⎔" />
+                <NavTileIcon>
+                  <AccountTreeIcon />
+                </NavTileIcon>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     Древо
@@ -523,7 +528,9 @@ export function HomePage() {
               }}
             >
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileGlyph label="М" />
+                <NavTileIcon>
+                  <PhotoLibraryOutlinedIcon />
+                </NavTileIcon>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     Медиа
@@ -550,7 +557,9 @@ export function HomePage() {
               }}
             >
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileGlyph label="К" />
+                <NavTileIcon>
+                  <MapOutlinedIcon />
+                </NavTileIcon>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     Карта
@@ -577,7 +586,9 @@ export function HomePage() {
               }}
             >
               <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileGlyph label="И" />
+                <NavTileIcon>
+                  <EditNoteOutlinedIcon />
+                </NavTileIcon>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     Идеи
