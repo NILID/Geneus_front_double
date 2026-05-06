@@ -21,6 +21,7 @@ import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { UsersAdminPage } from './pages/UsersAdminPage';
 import { SessionLoading } from './components/SessionLoading';
+import { GuestAuthLayout } from './components/GuestAuthLayout';
 
 function PublicOnlyRoute({ children }: { children: React.ReactElement }) {
   const { user, loading } = useAuth();
@@ -40,18 +41,41 @@ function AppRoutes() {
       <Route
         path="/login"
         element={
-          <PublicOnlyRoute>
-            <LoginPage />
-          </PublicOnlyRoute>
+          <GuestAuthLayout>
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          </GuestAuthLayout>
         }
       />
       <Route
         path="/register"
         element={<Navigate to="/login" replace />}
       />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
+      <Route
+        path="/forgot-password"
+        element={
+          <GuestAuthLayout>
+            <ForgotPasswordPage />
+          </GuestAuthLayout>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <GuestAuthLayout>
+            <ResetPasswordPage />
+          </GuestAuthLayout>
+        }
+      />
+      <Route
+        path="/accept-invitation"
+        element={
+          <GuestAuthLayout>
+            <AcceptInvitationPage />
+          </GuestAuthLayout>
+        }
+      />
       <Route
         path="/"
         element={

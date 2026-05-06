@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Link from '@mui/material/Link';
-import Paper from '@mui/material/Paper';
+import { GuestAuthFormPaper } from '../components/GuestAuthFormPaper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -33,7 +33,7 @@ export function ForgotPasswordPage() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 } }}>
+      <GuestAuthFormPaper>
         <Typography variant="h1" component="h1" gutterBottom align="center">
           Сброс пароля
         </Typography>
@@ -77,7 +77,7 @@ export function ForgotPasswordPage() {
             Вернуться к странице входа
           </Link>
         </Typography>
-      </Paper>
+      </GuestAuthFormPaper>
     </Container>
   );
 }
