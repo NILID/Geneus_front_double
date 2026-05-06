@@ -36,6 +36,8 @@ export interface GalleryPhotoCommentsPanelProps {
   sx?: SxProps<Theme>;
   /** Тёмная панель в полноэкранном просмотре — контрастные поля и карточки комментариев */
   surface?: 'light' | 'dark';
+  /** Скрыть заголовок «Комментарии» (если заголовок уже в родительском модальном окне) */
+  hideSectionTitle?: boolean;
 }
 
 export function GalleryPhotoCommentsPanel({
@@ -44,6 +46,7 @@ export function GalleryPhotoCommentsPanel({
   onCommentsCountChange,
   sx: sxProp,
   surface = 'light',
+  hideSectionTitle = false,
 }: GalleryPhotoCommentsPanelProps) {
   const [comments, setComments] = useState<GalleryPhotoComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,17 +100,70 @@ export function GalleryPhotoCommentsPanel({
 
   const dark = surface === 'dark';
 
+  const commentsBody = loading ? (
+    <Typography variant="body2" color={dark ? 'grey.400' : 'text.secondary'} sx={{ mb: 1 }}>
+      Загрузка…
+    </Typography>
+  ) : loadError ? (
+    <Alert severity="error" sx={{ mb: 1 }}>
+      {loadError}
+    </Alert>
+  ) : comments.length === 0 ? (
+    <Typography variant="body2" color={dark ? 'grey.500' : 'text.secondary'} sx={{ mb: 1 }}>
+      Пока нет комментариев.
+    </Typography>
+  ) : (
+    <Stack spacing={1} sx={{ mb: 2, pr: dark ? 0.5 : undefined }}>
+      {comments.map((c) => (
+        <Paper
+          key={c.id}
+          variant="outlined"
+          sx={{
+            p: 1,
+            bgcolor: dark ? 'grey.800' : 'action.hover',
+            borderColor: dark ? 'grey.700' : undefined,
+          }}
+        >
+          <Typography
+            variant="caption"
+            color={dark ? 'grey.500' : 'text.secondary'}
+            sx={{ display: 'block', mb: 0.5 }}
+          >
+            {`${formatWhen(c.created_at)}${c.author_email ? ` · ${c.author_email}` : ''}${
+              currentUserId != null && c.user_id === currentUserId ? ' · вы' : ''
+            }`}
+          </Typography>
+          <Typography
+            variant="body2"
+            component="div"
+            sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: dark ? 'grey.100' : undefined }}
+          >
+            {c.body}
+          </Typography>
+        </Paper>
+      ))}
+    </Stack>
+  );
+
   return (
     <Box
       sx={{
         px: 2,
         py: 1.5,
-        maxHeight: dark ? 'none' : '38vh',
-        flex: dark ? '1 1 auto' : undefined,
-        minHeight: dark ? 0 : undefined,
-        display: dark ? 'flex' : undefined,
-        flexDirection: dark ? 'column' : undefined,
-        overflowY: dark ? 'hidden' : 'auto',
+        boxSizing: 'border-box',
+        ...(dark
+          ? {
+              height: '100%',
+              minHeight: 0,
+              maxHeight: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }
+          : {
+              maxHeight: '38vh',
+              overflowY: 'auto',
+            }),
         borderTop: dark ? 0 : 1,
         borderColor: 'divider',
         bgcolor: dark ? 'transparent' : 'background.paper',
@@ -115,68 +171,41 @@ export function GalleryPhotoCommentsPanel({
         ...sxProp,
       }}
     >
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>
-        Комментарии
-      </Typography>
+      {hideSectionTitle ? null : (
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>
+          Комментарии
+        </Typography>
+      )}
 
-      {loading ? (
-        <Typography variant="body2" color={dark ? 'grey.400' : 'text.secondary'} sx={{ mb: 1, flexShrink: 0 }}>
-          Загрузка…
-        </Typography>
-      ) : loadError ? (
-        <Alert severity="error" sx={{ mb: 1, flexShrink: 0 }}>
-          {loadError}
-        </Alert>
-      ) : comments.length === 0 ? (
-        <Typography variant="body2" color={dark ? 'grey.500' : 'text.secondary'} sx={{ mb: 1, flexShrink: 0 }}>
-          Пока нет комментариев.
-        </Typography>
-      ) : (
-        <Stack
-          spacing={1}
+      {dark ? (
+        <Box
           sx={{
-            mb: 2,
-            flex: dark ? '1 1 auto' : undefined,
-            minHeight: dark ? 0 : undefined,
-            overflowY: dark ? 'auto' : undefined,
-            pr: dark ? 0.5 : undefined,
+            flex: '1 1 0%',
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+            touchAction: 'pan-y',
+            pr: 0.5,
           }}
         >
-          {comments.map((c) => (
-            <Paper
-              key={c.id}
-              variant="outlined"
-              sx={{
-                p: 1,
-                bgcolor: dark ? 'grey.800' : 'action.hover',
-                borderColor: dark ? 'grey.700' : undefined,
-              }}
-            >
-              <Typography
-                variant="caption"
-                color={dark ? 'grey.500' : 'text.secondary'}
-                sx={{ display: 'block', mb: 0.5 }}
-              >
-                {`${formatWhen(c.created_at)}${c.author_email ? ` · ${c.author_email}` : ''}${
-                  currentUserId != null && c.user_id === currentUserId ? ' · вы' : ''
-                }`}
-              </Typography>
-              <Typography
-                variant="body2"
-                component="div"
-                sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: dark ? 'grey.100' : undefined }}
-              >
-                {c.body}
-              </Typography>
-            </Paper>
-          ))}
-        </Stack>
+          {commentsBody}
+        </Box>
+      ) : (
+        commentsBody
       )}
 
       <Box
         component="form"
         onSubmit={(ev) => void handleSubmit(ev)}
-        sx={{ flexShrink: 0, mt: dark ? 'auto' : undefined, pt: dark ? 1 : undefined }}
+        sx={{
+          flexShrink: 0,
+          pt: dark ? 1.5 : 0,
+          mt: dark ? 0 : undefined,
+          borderTop: dark ? 1 : 0,
+          borderColor: dark ? 'grey.800' : undefined,
+        }}
       >
         <Stack spacing={1}>
           {formError ? <Alert severity="error">{formError}</Alert> : null}

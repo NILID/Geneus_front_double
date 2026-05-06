@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
+import CommentIcon from '@mui/icons-material/Comment';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Fade from '@mui/material/Fade';
 import IconButton from '@mui/material/IconButton';
 import Modal from '@mui/material/Modal';
@@ -12,6 +14,7 @@ import { useTheme } from '@mui/material/styles';
 
 import type { GalleryMasonryItem } from '../api/galleryPhotoApi';
 
+import { GalleryPhotoCommentsModal } from './GalleryPhotoCommentsModal';
 import { GalleryPhotoCommentsPanel } from './GalleryPhotoCommentsPanel';
 import { GalleryPhotoTaggedPeopleLinks } from './GalleryPhotoTaggedPeople';
 
@@ -47,6 +50,7 @@ export function GalleryPhotoViewerModal({
 }: GalleryPhotoViewerModalProps) {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileCommentsOpen, setMobileCommentsOpen] = useState(false);
 
   const safeLen = photos.length;
   const safeIndex = safeLen > 0 ? Math.min(Math.max(index, 0), safeLen - 1) : 0;
@@ -68,6 +72,16 @@ export function GalleryPhotoViewerModal({
 
   useEffect(() => {
     if (!open) {
+      setMobileCommentsOpen(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setMobileCommentsOpen(false);
+  }, [index]);
+
+  useEffect(() => {
+    if (!open || mobileCommentsOpen) {
       return;
     }
     const onKeyDown = (e: KeyboardEvent) => {
@@ -89,7 +103,7 @@ export function GalleryPhotoViewerModal({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose, goPrev, goNext]);
+  }, [open, mobileCommentsOpen, onClose, goPrev, goNext]);
 
   const captionTitle = useMemo(() => {
     if (!item) {
@@ -107,80 +121,153 @@ export function GalleryPhotoViewerModal({
   const tagged = item.tagged_people ?? [];
   const showNav = safeLen > 1;
 
-  const sidebar = (
+  const metaHeader = (
+    <Box sx={{ px: 2.5, pt: 2, pb: 1.5, flexShrink: 0 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'common.white', mb: 1, lineHeight: 1.35 }}>
+        {captionTitle}
+      </Typography>
+      {item.uploaded_by_email ? (
+        <Typography variant="body2" sx={{ color: 'grey.500', mb: 0.5 }}>
+          Загрузил: {item.uploaded_by_email}
+        </Typography>
+      ) : null}
+      <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mb: 1 }}>
+        {formatMetaDate(item.created_at)}
+      </Typography>
+      {tagged.length > 0 ? (
+        <Box sx={{ color: 'grey.400', typography: 'body2' }}>
+          <GalleryPhotoTaggedPeopleLinks tagged={tagged} onPersonClick={onClose} />
+        </Box>
+      ) : null}
+      <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mt: 1 }}>
+        {safeIndex + 1} из {safeLen}
+      </Typography>
+    </Box>
+  );
+
+  const commentsSection = (
     <Box
       sx={{
-        width: { xs: '100%', md: 380 },
+        minHeight: 0,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        px: 0,
+        pb: 2,
+        flex: '1 1 auto',
+      }}
+    >
+      <GalleryPhotoCommentsPanel
+        key={item.id}
+        photoId={item.id}
+        currentUserId={currentUserId}
+        onCommentsCountChange={onCommentsCountChange}
+        surface="dark"
+        sx={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          height: undefined,
+          borderTop: 1,
+          borderColor: 'grey.800',
+          pt: 1.5,
+        }}
+      />
+    </Box>
+  );
+
+  const commentCount = item.comments_count ?? 0;
+
+  const sidebarMobile = (
+    <Box
+      sx={{
+        width: '100%',
+        flexShrink: 0,
+        bgcolor: 'grey.900',
+        color: 'grey.200',
+        borderTop: 1,
+        borderColor: 'grey.800',
+        maxHeight: 'min(44vh, 420px)',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {metaHeader}
+      <Box sx={{ px: 2.5, pb: 2 }}>
+        <Button
+          fullWidth
+          type="button"
+          variant="outlined"
+          color="inherit"
+          startIcon={<CommentIcon />}
+          onClick={() => setMobileCommentsOpen(true)}
+          aria-label={`Комментарии, ${commentCount}`}
+          sx={{
+            borderColor: 'grey.600',
+            color: 'common.white',
+            py: 1.25,
+            '&:hover': { borderColor: 'grey.400', bgcolor: 'rgba(255,255,255,0.06)' },
+          }}
+        >
+          Комментарии · {commentCount}
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  const sidebarDesktop = (
+    <Box
+      sx={{
+        width: 380,
         maxWidth: '100%',
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'grey.900',
         color: 'grey.200',
-        borderLeft: { xs: 0, md: 1 },
-        borderTop: { xs: 1, md: 0 },
+        borderLeft: 1,
+        borderTop: 0,
         borderColor: 'grey.800',
-        maxHeight: { xs: '42vh', md: '100%' },
+        height: '100%',
+        maxHeight: '100%',
         minHeight: 0,
+        overflow: 'hidden',
       }}
     >
-      <Box sx={{ px: 2.5, pt: 2, pb: 1.5, flexShrink: 0 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'common.white', mb: 1, lineHeight: 1.35 }}>
-          {captionTitle}
-        </Typography>
-        {item.uploaded_by_email ? (
-          <Typography variant="body2" sx={{ color: 'grey.500', mb: 0.5 }}>
-            Загрузил: {item.uploaded_by_email}
-          </Typography>
-        ) : null}
-        <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mb: 1 }}>
-          {formatMetaDate(item.created_at)}
-        </Typography>
-        {tagged.length > 0 ? (
-          <Box sx={{ color: 'grey.400', typography: 'body2' }}>
-            <GalleryPhotoTaggedPeopleLinks tagged={tagged} onPersonClick={onClose} />
-          </Box>
-        ) : null}
-        <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mt: 1 }}>
-          {safeIndex + 1} из {safeLen}
-        </Typography>
-      </Box>
-
-      <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', px: 0, pb: 2 }}>
-        <GalleryPhotoCommentsPanel
-          key={item.id}
-          photoId={item.id}
-          currentUserId={currentUserId}
-          onCommentsCountChange={onCommentsCountChange}
-          surface="dark"
-          sx={{ flex: '1 1 auto', minHeight: 0, borderTop: 1, borderColor: 'grey.800', pt: 1.5 }}
-        />
-      </Box>
+      {metaHeader}
+      {commentsSection}
     </Box>
   );
 
+  const sidebar = isNarrow ? sidebarMobile : sidebarDesktop;
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      closeAfterTransition
-      slotProps={{
-        backdrop: {
-          sx: { bgcolor: 'rgba(0,0,0,0.92)' },
-        },
-      }}
-    >
-      <Fade in={open}>
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: isNarrow ? 'column' : 'row',
-            outline: 0,
-            overflow: 'hidden',
-          }}
-        >
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        closeAfterTransition
+        slotProps={{
+          backdrop: {
+            sx: { bgcolor: 'rgba(0,0,0,0.92)' },
+          },
+        }}
+      >
+        <Fade in={open}>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              maxHeight: '100vh',
+              '@supports (height: 100dvh)': {
+                maxHeight: '100dvh',
+              },
+              display: 'flex',
+              flexDirection: isNarrow ? 'column' : 'row',
+              outline: 0,
+              overflow: 'hidden',
+              minHeight: 0,
+            }}
+          >
           <IconButton
             onClick={onClose}
             aria-label="Закрыть"
@@ -200,7 +287,7 @@ export function GalleryPhotoViewerModal({
 
           <Box
             sx={{
-              flex: '1 1 55%',
+              flex: { xs: '1 1 0', md: '1 1 55%' },
               minWidth: 0,
               minHeight: 0,
               display: 'flex',
@@ -210,6 +297,7 @@ export function GalleryPhotoViewerModal({
               bgcolor: '#000',
               py: { xs: 1, md: 2 },
               px: showNav ? { xs: 5, md: 7 } : 2,
+              overflow: 'hidden',
             }}
           >
             {showNav ? (
@@ -239,6 +327,9 @@ export function GalleryPhotoViewerModal({
                 sx={{
                   maxWidth: '100%',
                   maxHeight: { xs: 'min(52vh, 520px)', md: 'calc(100vh - 32px)' },
+                  '@supports (height: 100dvh)': {
+                    maxHeight: { xs: 'min(52dvh, 520px)', md: 'calc(100dvh - 32px)' },
+                  },
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain',
@@ -274,5 +365,15 @@ export function GalleryPhotoViewerModal({
         </Box>
       </Fade>
     </Modal>
+    {isNarrow ? (
+      <GalleryPhotoCommentsModal
+        open={mobileCommentsOpen}
+        onClose={() => setMobileCommentsOpen(false)}
+        photoId={item.id}
+        currentUserId={currentUserId}
+        onCommentsCountChange={onCommentsCountChange}
+      />
+    ) : null}
+    </>
   );
 }
