@@ -187,7 +187,6 @@ export function GalleryPhotoMasonry({
                   <img
                     src={item.image_url}
                     alt={item.caption ?? ''}
-                    loading="lazy"
                     style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
                   />
                 </Box>
