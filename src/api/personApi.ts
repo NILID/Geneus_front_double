@@ -101,6 +101,9 @@ function authHeaders(): Headers {
   return h;
 }
 
+/** Safari may cache JSON that holds expiring Active Storage signed URLs. */
+const NO_STORE: Pick<RequestInit, 'cache'> = { cache: 'no-store' };
+
 /** Склеивает имя и фамилию для заголовков и списков. */
 export function personDisplayName(p: {
   first_name: string;
@@ -115,7 +118,7 @@ export function personDisplayName(p: {
 export async function fetchPerson(id: string): Promise<PersonDetail> {
   const res = await fetch(
     `${API_BASE}/api/v1/people/${encodeURIComponent(id)}`,
-    { headers: authHeaders() },
+    { ...NO_STORE, headers: authHeaders() },
   );
   if (res.status === 404) {
     throw new Error('Персона не найдена');
@@ -142,6 +145,7 @@ export async function fetchPerson(id: string): Promise<PersonDetail> {
 
 export async function fetchRecentPeople(): Promise<PersonHomeRow[]> {
   const res = await fetch(`${API_BASE}/api/v1/people/recent`, {
+    ...NO_STORE,
     headers: authHeaders(),
   });
   if (!res.ok) {
@@ -269,12 +273,14 @@ export async function updatePerson(
           fd.append('person[avatar]', input.avatar!);
           const h = authHeaders();
           return {
+            ...NO_STORE,
             method: 'PATCH' as const,
             headers: h,
             body: fd,
           };
         })()
       : {
+          ...NO_STORE,
           method: 'PATCH' as const,
           headers: (() => {
             const h = authHeaders();

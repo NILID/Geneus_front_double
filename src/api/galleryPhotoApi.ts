@@ -53,6 +53,9 @@ function authHeaders(jsonBody: boolean): Headers {
   return h;
 }
 
+/** Safari may reuse cached JSON; blob URLs in the payload expire (Active Storage signed URLs). */
+const NO_STORE: Pick<RequestInit, 'cache'> = { cache: 'no-store' };
+
 async function parseErrorMessage(res: Response): Promise<string> {
   try {
     const body: unknown = await res.json();
@@ -73,6 +76,7 @@ async function parseErrorMessage(res: Response): Promise<string> {
 
 export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
   const res = await fetch(`${API_BASE}/api/v1/gallery_photos`, {
+    ...NO_STORE,
     headers: authHeaders(false),
   });
   if (!res.ok) {
@@ -120,6 +124,7 @@ export async function uploadGalleryPhoto(
   }
   const h = authHeaders(false);
   const res = await fetch(`${API_BASE}/api/v1/gallery_photos`, {
+    ...NO_STORE,
     method: 'POST',
     headers: h,
     body: fd,
@@ -152,6 +157,7 @@ async function patchGalleryPhotoJson(
 ): Promise<GalleryPhoto> {
   const url = `${API_BASE}/api/v1/gallery_photos/${id}`;
   const res = await fetch(url, {
+    ...NO_STORE,
     method: 'PATCH',
     headers: authHeaders(true),
     body: JSON.stringify({ gallery_photo: payload }),
@@ -195,6 +201,7 @@ export async function updateGalleryPhoto(
       }
     }
     const res = await fetch(url, {
+      ...NO_STORE,
       method: 'PATCH',
       headers: authHeaders(false),
       body: fd,
@@ -239,6 +246,7 @@ export async function updateGalleryPhoto(
 
 export async function deleteGalleryPhoto(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/gallery_photos/${id}`, {
+    ...NO_STORE,
     method: 'DELETE',
     headers: authHeaders(false),
   });
@@ -263,6 +271,7 @@ function normalizeGalleryPhotoComment(raw: unknown): GalleryPhotoComment {
 
 export async function fetchGalleryPhotoComments(photoId: number): Promise<GalleryPhotoComment[]> {
   const res = await fetch(`${API_BASE}/api/v1/gallery_photos/${photoId}/comments`, {
+    ...NO_STORE,
     headers: authHeaders(false),
   });
   if (!res.ok) {
@@ -281,6 +290,7 @@ export async function createGalleryPhotoComment(
   body: string,
 ): Promise<{ comment: GalleryPhotoComment; comments_count: number }> {
   const res = await fetch(`${API_BASE}/api/v1/gallery_photos/${photoId}/comments`, {
+    ...NO_STORE,
     method: 'POST',
     headers: authHeaders(true),
     body: JSON.stringify({ comment: { body } }),

@@ -174,7 +174,7 @@ function authorizedInit(init: RequestInit = {}): RequestInit {
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  return { ...init, headers };
+  return { ...init, headers, cache: 'no-store' };
 }
 
 export async function fetchFamilyChart(): Promise<FamilyChartData> {
@@ -198,6 +198,7 @@ export async function saveFamilyTree(payload: UpdateTreePayload): Promise<Family
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
+    cache: 'no-store',
   });
   if (!res.ok) {
     throw new Error(`Update tree request failed: ${res.status} ${res.statusText}`);
