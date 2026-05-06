@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 
+import { resolveRailsBlobUrl } from '../api/assetUrls';
 import type { GalleryMasonryItem } from '../api/galleryPhotoApi';
 
 import { GalleryPhotoCommentsPanel } from './GalleryPhotoCommentsPanel';
@@ -231,10 +232,10 @@ export function GalleryPhotoViewerModal({
               </IconButton>
             ) : null}
 
-            {item.image_url ? (
+            {resolveRailsBlobUrl(item.image_url) ? (
               <Box
                 component="img"
-                src={item.image_url}
+                src={resolveRailsBlobUrl(item.image_url)}
                 alt={item.caption ?? ''}
                 sx={{
                   maxWidth: '100%',

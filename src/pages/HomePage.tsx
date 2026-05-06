@@ -27,6 +27,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
+import { resolveRailsBlobUrl } from '../api/assetUrls';
 import { createInvitationLinkRequest, sendInvitationRequest } from '../auth/authApi';
 import { useAuth } from '../auth/AuthContext';
 import { canSendInvitations } from '../auth/roles';
@@ -642,7 +643,7 @@ export function HomePage() {
                         >
                           <Stack direction="row" spacing={2} sx={{ p: 2, alignItems: 'center' }}>
                             <Avatar
-                              src={p.avatar_url ?? undefined}
+                              src={resolveRailsBlobUrl(p.avatar_url)}
                               alt={personDisplayName(p)}
                               sx={{ width: 56, height: 56 }}
                             >
@@ -689,11 +690,11 @@ export function HomePage() {
                     <Grid key={ph.id} size={{ xs: 12, sm: 6, md: 3 }}>
                       <Card variant="outlined" sx={{ height: '100%', overflow: 'hidden' }}>
                         <CardActionArea component={RouterLink} to="/media">
-                          {ph.image_url ? (
+                          {resolveRailsBlobUrl(ph.image_url) ? (
                             <CardMedia
                               component="img"
                               height="140"
-                              image={ph.image_url}
+                              image={resolveRailsBlobUrl(ph.image_url)}
                               alt={ph.caption ?? 'Фото'}
                               sx={{ objectFit: 'cover' }}
                             />

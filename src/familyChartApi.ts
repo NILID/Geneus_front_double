@@ -1,3 +1,4 @@
+import { resolveRailsBlobUrl } from './api/assetUrls';
 import { API_BASE } from './auth/authApi';
 import { getStoredToken } from './auth/storage';
 import { formatFamilyChartYearLine } from './lib/genealogyDateFormat';
@@ -75,25 +76,46 @@ export function getUpdateTreeUrl(): string {
   return envOrDefaultTreeUrl('REACT_APP_UPDATE_TREE_URL', 'update_tree');
 }
 
+function rewriteFamilyChartAvatarUrls(data: FamilyChartData): FamilyChartData {
+  return data.map((node) => {
+    const raw = node.data?.avatar;
+    if (typeof raw !== 'string' || raw === '') {
+      return node;
+    }
+    const fixed = resolveRailsBlobUrl(raw);
+    if (!fixed || fixed === raw) {
+      return node;
+    }
+    return {
+      ...node,
+      data: { ...node.data, avatar: fixed },
+    };
+  });
+}
+
 export function normalizeFamilyChartPayload(json: unknown): FamilyChartData {
+  let data: FamilyChartData;
   if (Array.isArray(json)) {
-    return json as FamilyChartData;
-  }
-  if (json && typeof json === 'object') {
+    data = json as FamilyChartData;
+  } else if (json && typeof json === 'object') {
     const o = json as Record<string, unknown>;
     if (Array.isArray(o.family_chart)) {
-      return o.family_chart as FamilyChartData;
+      data = o.family_chart as FamilyChartData;
+    } else if (Array.isArray(o.data)) {
+      data = o.data as FamilyChartData;
+    } else if (Array.isArray(o.people)) {
+      data = o.people as FamilyChartData;
+    } else {
+      throw new Error(
+        'Family chart response must be a JSON array of nodes, or an object with family_chart, data, or people array.',
+      );
     }
-    if (Array.isArray(o.data)) {
-      return o.data as FamilyChartData;
-    }
-    if (Array.isArray(o.people)) {
-      return o.people as FamilyChartData;
-    }
+  } else {
+    throw new Error(
+      'Family chart response must be a JSON array of nodes, or an object with family_chart, data, or people array.',
+    );
   }
-  throw new Error(
-    'Family chart response must be a JSON array of nodes, or an object with family_chart, data, or people array.',
-  );
+  return rewriteFamilyChartAvatarUrls(data);
 }
 
 /** Варианты для выбора персон при отметке на фото (id — ключ в БД для API персон). */
@@ -182,7 +204,7 @@ export async function saveFamilyTree(payload: UpdateTreePayload): Promise<Family
   }
   const json: unknown = await res.json();
   if (json && typeof json === 'object' && Array.isArray((json as Record<string, unknown>).nodes)) {
-    return (json as { nodes: FamilyChartData }).nodes;
+    return rewriteFamilyChartAvatarUrls((json as { nodes: FamilyChartData }).nodes);
   }
   return normalizeFamilyChartPayload(json);
 }

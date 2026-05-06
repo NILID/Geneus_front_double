@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
+import { resolveRailsBlobUrl } from '../api/assetUrls';
 import { personDisplayName, type PersonDetail } from '../api/personApi';
 
 export type PersonProfileTab = 'overview' | 'facts' | 'edit';
@@ -88,7 +89,7 @@ export function PersonProfileShell({
                 }}
               >
                 <MuiAvatar
-                  src={person.avatar_url ?? undefined}
+                  src={resolveRailsBlobUrl(person.avatar_url)}
                   alt={personDisplayName(person)}
                   sx={{
                     width: { xs: 132, sm: 168 },
@@ -99,7 +100,7 @@ export function PersonProfileShell({
                     fontSize: { xs: '2.5rem', sm: '3rem' },
                   }}
                 >
-                  {person.avatar_url ? null : personAvatarFallback(person)}
+                  {resolveRailsBlobUrl(person.avatar_url) ? null : personAvatarFallback(person)}
                 </MuiAvatar>
 
                 <Box

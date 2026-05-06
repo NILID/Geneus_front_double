@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import CommentIcon from '@mui/icons-material/Comment';
 import type { SxProps, Theme } from '@mui/material/styles';
 
+import { resolveRailsBlobUrl } from '../api/assetUrls';
 import type { GalleryMasonryItem } from '../api/galleryPhotoApi';
 import { GalleryPhotoTaggedPeopleLinks } from './GalleryPhotoTaggedPeople';
 import { GalleryPhotoViewerModal } from './GalleryPhotoViewerModal';
@@ -161,7 +162,7 @@ export function GalleryPhotoMasonry({
 
           return (
             <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
-              {item.image_url ? (
+              {resolveRailsBlobUrl(item.image_url) ? (
                 <Box
                   component="button"
                   type="button"
@@ -185,7 +186,7 @@ export function GalleryPhotoMasonry({
                   }}
                 >
                   <img
-                    src={item.image_url}
+                    src={resolveRailsBlobUrl(item.image_url)}
                     alt={item.caption ?? ''}
                     loading="lazy"
                     style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}

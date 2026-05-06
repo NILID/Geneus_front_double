@@ -17,6 +17,7 @@ import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { resolveRailsBlobUrl } from '../api/assetUrls';
 import {
   fetchPerson,
   personDisplayName,
@@ -375,7 +376,7 @@ export function EditPersonPage() {
                 sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}
               >
                 <MuiAvatar
-                  src={avatarPreview ?? avatarUrl ?? undefined}
+                  src={avatarPreview ?? resolveRailsBlobUrl(avatarUrl)}
                   alt={personDisplayName({ first_name: firstName, last_name: lastName || null })}
                   sx={{ width: 96, height: 96 }}
                 />
