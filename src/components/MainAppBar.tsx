@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -7,6 +8,11 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -14,11 +20,14 @@ import { AccountSettingsForm } from './AccountSettingsForm';
 import { useAuth } from '../auth/AuthContext';
 import { canAccessAudit, canManageUsers } from '../auth/roles';
 
+type NavItem = { to: string; label: string; active: boolean };
+
 export function MainAppBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
@@ -31,6 +40,30 @@ export function MainAppBar() {
   const ideasActive = pathname === '/ideas';
   const auditActive = pathname === '/audit';
   const adminUsersActive = pathname === '/admin/users';
+
+  const navItems = useMemo((): NavItem[] => {
+    const items: NavItem[] = [
+      { to: '/tree', label: 'Древо', active: treeActive },
+      { to: '/media', label: 'Медиа', active: mediaActive },
+      { to: '/map', label: 'Карта', active: mapActive },
+      { to: '/ideas', label: 'Идеи', active: ideasActive },
+    ];
+    if (canManageUsers(user?.role)) {
+      items.push({ to: '/admin/users', label: 'Пользователи', active: adminUsersActive });
+    }
+    if (canAccessAudit(user?.role)) {
+      items.push({ to: '/audit', label: 'Аудит', active: auditActive });
+    }
+    return items;
+  }, [
+    user?.role,
+    treeActive,
+    mediaActive,
+    mapActive,
+    ideasActive,
+    auditActive,
+    adminUsersActive,
+  ]);
 
   const email = user?.email ?? '';
 
@@ -46,97 +79,65 @@ export function MainAppBar() {
         borderColor: 'divider',
       }}
     >
-      <Toolbar variant="dense" sx={{ gap: 1, flexWrap: 'wrap', py: 1 }}>
-        <Typography
-          variant="h6"
-          component={RouterLink}
-          to="/"
+      <Toolbar
+        variant="dense"
+        sx={{
+          gap: 1,
+          flexWrap: 'nowrap',
+          py: 1,
+          alignItems: 'center',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+          <IconButton
+            color="inherit"
+            aria-label="Открыть меню разделов"
+            edge="start"
+            onClick={() => setMobileNavOpen(true)}
+            size="small"
+            sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: -0.5 }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography
+            variant="h6"
+            component={RouterLink}
+            to="/"
+            sx={{
+              color: 'inherit',
+              textDecoration: 'none',
+              fontWeight: 700,
+              mr: { xs: 0, sm: 1 },
+            }}
+          >
+            Родословная
+          </Typography>
+        </Box>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          useFlexGap
           sx={{
-            color: 'inherit',
-            textDecoration: 'none',
-            fontWeight: 700,
-            mr: { xs: 0, sm: 1 },
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            display: { xs: 'none', md: 'flex' },
           }}
         >
-          Родословная
-        </Typography>
-        <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap', alignItems: 'center' }}>
-          <Button
-            component={RouterLink}
-            to="/tree"
-            color="inherit"
-            size="small"
-            sx={{
-              fontWeight: treeActive ? 600 : 400,
-              ...(treeActive && { bgcolor: 'action.selected' }),
-            }}
-          >
-            Древо
-          </Button>
-          <Button
-            component={RouterLink}
-            to="/media"
-            color="inherit"
-            size="small"
-            sx={{
-              fontWeight: mediaActive ? 600 : 400,
-              ...(mediaActive && { bgcolor: 'action.selected' }),
-            }}
-          >
-            Медиа
-          </Button>
-          <Button
-            component={RouterLink}
-            to="/map"
-            color="inherit"
-            size="small"
-            sx={{
-              fontWeight: mapActive ? 600 : 400,
-              ...(mapActive && { bgcolor: 'action.selected' }),
-            }}
-          >
-            Карта
-          </Button>
-          <Button
-            component={RouterLink}
-            to="/ideas"
-            color="inherit"
-            size="small"
-            sx={{
-              fontWeight: ideasActive ? 600 : 400,
-              ...(ideasActive && { bgcolor: 'action.selected' }),
-            }}
-          >
-            Идеи
-          </Button>
-          {canManageUsers(user?.role) ? (
+          {navItems.map(({ to, label, active }) => (
             <Button
+              key={to}
               component={RouterLink}
-              to="/admin/users"
+              to={to}
               color="inherit"
               size="small"
               sx={{
-                fontWeight: adminUsersActive ? 600 : 400,
-                ...(adminUsersActive && { bgcolor: 'action.selected' }),
+                fontWeight: active ? 600 : 400,
+                ...(active && { bgcolor: 'action.selected' }),
               }}
             >
-              Пользователи
+              {label}
             </Button>
-          ) : null}
-          {canAccessAudit(user?.role) ? (
-            <Button
-              component={RouterLink}
-              to="/audit"
-              color="inherit"
-              size="small"
-              sx={{
-                fontWeight: auditActive ? 600 : 400,
-                ...(auditActive && { bgcolor: 'action.selected' }),
-              }}
-            >
-              Аудит
-            </Button>
-          ) : null}
+          ))}
         </Stack>
         <Box sx={{ flexGrow: 1 }} />
         {email ? (
@@ -193,6 +194,32 @@ export function MainAppBar() {
           Выйти
         </Button>
       </Toolbar>
+      <Drawer
+        anchor="left"
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 },
+        }}
+      >
+        <Box sx={{ pt: 2 }} role="presentation">
+          <List component="nav" dense>
+            {navItems.map(({ to, label, active }) => (
+              <ListItemButton
+                key={to}
+                component={RouterLink}
+                to={to}
+                selected={active}
+                onClick={() => setMobileNavOpen(false)}
+              >
+                <ListItemText primary={label} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
     </AppBar>
   );
 }
