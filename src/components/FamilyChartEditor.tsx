@@ -361,6 +361,28 @@ export function FamilyChartEditor({
         })
         .setCardClickOpen(card);
 
+      /**
+       * `family-chart` attaches one click handler on `.card`; the branch control is `.mini-tree` inside it.
+       * `setCardClickOpen` always calls `open()` then `onCardClickDefault`, so clicking the mini-tree also
+       * opened the edit form. Only the default handler should run for `.mini-tree` clicks.
+       * @see https://donatso.github.io/family-chart/modules.html — `CardHtml.setOnCardClick`
+       */
+      card.setOnCardClick((e: MouseEvent, d: { data: FamilyChartPerson }) => {
+        const t = e.target;
+        if (t instanceof Element && t.closest('.mini-tree')) {
+          card.onCardClickDefault(e, d);
+          return;
+        }
+        if (editTree.isAddingRelative()) {
+          editTree.open(d.data);
+        } else if (editTree.isRemovingRelative()) {
+          editTree.open(d.data);
+        } else {
+          editTree.open(d.data);
+          card.onCardClickDefault(e, d);
+        }
+      });
+
       editTreeRef.current = editTree;
     } else {
       editTreeRef.current = null;
