@@ -7,6 +7,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import L from 'leaflet';
 import {
   fetchPeopleMapLocations,
@@ -176,7 +177,7 @@ export function MapPage() {
         sx={{
           position: 'absolute',
           top: 12,
-          left: 12,
+          right: 12,
           zIndex: 1000,
           p: 1.5,
           maxWidth: { xs: 'calc(100% - 24px)', sm: 400 },
@@ -212,9 +213,20 @@ export function MapPage() {
             />
           )}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          Синяя метка — место рождения, красная — место смерти. Карта © OpenStreetMap.
-        </Typography>
+        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <FiberManualRecordIcon sx={{ fontSize: 14, color: '#1565c0' }} aria-hidden />
+            <Typography variant="caption" color="text.secondary" component="span">
+              — место рождения
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <FiberManualRecordIcon sx={{ fontSize: 14, color: '#c62828' }} aria-hidden />
+            <Typography variant="caption" color="text.secondary" component="span">
+              — место смерти
+            </Typography>
+          </Box>
+        </Box>
       </Paper>
       {loadingPeople && (
         <CircularProgress

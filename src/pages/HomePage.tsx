@@ -28,6 +28,8 @@ import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
 import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import { createInvitationLinkRequest, sendInvitationRequest } from '../auth/authApi';
+import { useAuth } from '../auth/AuthContext';
+import { canSendInvitations } from '../auth/roles';
 import { fetchGalleryPhotos, type GalleryPhoto } from '../api/galleryPhotoApi';
 import { fetchIdeas, type Idea } from '../api/ideaApi';
 import {
@@ -106,6 +108,8 @@ function NavTileIcon({ children }: { children: React.ReactNode }) {
 }
 
 export function HomePage() {
+  const { user } = useAuth();
+  const showInvite = canSendInvitations(user?.role);
   const [people, setPeople] = useState<PersonHomeRow[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -294,15 +298,17 @@ export function HomePage() {
               >
                 Медиа
               </Button>
-              <Button
-                type="button"
-                variant="outlined"
-                size="large"
-                color="inherit"
-                onClick={openInviteDialog}
-              >
-                Пригласить
-              </Button>
+              {showInvite ? (
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="large"
+                  color="inherit"
+                  onClick={openInviteDialog}
+                >
+                  Пригласить
+                </Button>
+              ) : null}
             </Stack>
           </Stack>
         </Container>
