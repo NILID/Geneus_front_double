@@ -10,7 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
-import SvgIcon from '@mui/material/SvgIcon';
+import CommentIcon from '@mui/icons-material/Comment';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import {
@@ -54,9 +54,7 @@ function CommentCountBadge({ count }: { count: number }) {
       }}
       aria-label={`Комментариев: ${count}`}
     >
-      <SvgIcon fontSize="small" viewBox="0 0 24 24" aria-hidden>
-        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2zm0 14H5.17L4 17.17V4h16v12zM7 9h10v2H7V9zm0-3h10v2H7V6zm0 6h7v2H7v-2z" />
-      </SvgIcon>
+      <CommentIcon fontSize="small" aria-hidden />
       <Typography component="span" variant="caption" sx={{ fontWeight: 600, lineHeight: 1 }}>
         {count}
       </Typography>
