@@ -8,27 +8,36 @@ import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import L from 'leaflet';
 import {
   fetchPeopleMapLocations,
   personDisplayName,
   type PersonMapLocation,
 } from '../api/personApi';
+import { getGoogleMapsApiKey, loadGoogleMaps } from '../lib/googleMapsLoader';
+import {
+  BIRTH_MARKER_COLOR,
+  DEATH_MARKER_COLOR,
+  personMapMarkerIcon,
+} from '../lib/mapMarkers';
 
-const DEFAULT_CENTER: [number, number] = [55.751574, 37.573856];
+const DEFAULT_CENTER = { lat: 55.751574, lng: 37.573856 };
 const DEFAULT_ZOOM = 5;
-
-const OSM_TILE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const FIT_BOUNDS_PADDING = 48;
+const FIT_BOUNDS_MAX_ZOOM = 14;
 
 type PersonOption = { id: number; label: string };
 
+type MapMarkerEntry = {
+  marker: google.maps.Marker;
+  infoWindow: google.maps.InfoWindow;
+};
+
 export function MapPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<MapMarkerEntry[]>([]);
   const [mapReady, setMapReady] = useState(false);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [people, setPeople] = useState<PersonMapLocation[]>([]);
   const [loadingPeople, setLoadingPeople] = useState(true);
@@ -63,26 +72,46 @@ export function MapPage() {
     if (!el) {
       return;
     }
+    if (!getGoogleMapsApiKey()) {
+      setMapLoadError(
+        'Не задан REACT_APP_GOOGLE_MAPS_API_KEY. Добавьте ключ в .env и перезапустите приложение.',
+      );
+      return;
+    }
 
-    const map = L.map(el).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
-    L.tileLayer(OSM_TILE, {
-      attribution: OSM_ATTRIBUTION,
-      maxZoom: 19,
-    }).addTo(map);
+    let cancelled = false;
+    let map: google.maps.Map | null = null;
 
-    const markersLayer = L.layerGroup().addTo(map);
-    mapRef.current = map;
-    markersLayerRef.current = markersLayer;
-    setMapReady(true);
-
-    const t = window.setTimeout(() => map.invalidateSize(), 0);
+    loadGoogleMaps()
+      .then((g) => {
+        if (cancelled || !containerRef.current) {
+          return;
+        }
+        map = new g.maps.Map(containerRef.current, {
+          center: DEFAULT_CENTER,
+          zoom: DEFAULT_ZOOM,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+        mapRef.current = map;
+        setMapReady(true);
+        setMapLoadError(null);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setMapLoadError(e instanceof Error ? e.message : 'Не удалось загрузить Google Maps');
+        }
+      });
 
     return () => {
-      window.clearTimeout(t);
-      markersLayer.clearLayers();
-      map.remove();
+      cancelled = true;
+      for (const { marker, infoWindow } of markersRef.current) {
+        infoWindow.close();
+        marker.setMap(null);
+      }
+      markersRef.current = [];
       mapRef.current = null;
-      markersLayerRef.current = null;
       setMapReady(false);
     };
   }, []);
@@ -102,64 +131,81 @@ export function MapPage() {
   );
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !markersLayerRef.current) {
+    const map = mapRef.current;
+    if (!mapReady || !map) {
       return;
     }
-    const map = mapRef.current;
-    const layer = markersLayerRef.current;
-    layer.clearLayers();
+
+    for (const { marker, infoWindow } of markersRef.current) {
+      infoWindow.close();
+      marker.setMap(null);
+    }
+    markersRef.current = [];
 
     const visible = people.filter((p) => filterIds.length === 0 || filterIds.includes(p.id));
-    const bounds = L.latLngBounds([]);
+    const bounds = new google.maps.LatLngBounds();
+    let hasPoint = false;
+
+    const addMarker = (lat: number, lng: number, color: string, caption: string, personId: number) => {
+      const position = { lat, lng };
+      bounds.extend(position);
+      hasPoint = true;
+      const marker = new google.maps.Marker({
+        map,
+        position,
+        icon: personMapMarkerIcon(google, color),
+        title: caption,
+      });
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div style="padding:4px 0;max-width:260px;font-size:14px;line-height:1.35">${caption}<br/><a href="/person/${personId}">Открыть карточку</a></div>`,
+      });
+      marker.addListener('click', () => {
+        for (const entry of markersRef.current) {
+          entry.infoWindow.close();
+        }
+        infoWindow.open({ map, anchor: marker });
+      });
+      markersRef.current.push({ marker, infoWindow });
+    };
 
     for (const p of visible) {
       const name = personDisplayName(p);
       if (p.birth_latitude != null && p.birth_longitude != null) {
-        const latlng: L.LatLngTuple = [p.birth_latitude, p.birth_longitude];
-        bounds.extend(latlng);
         const place = p.location_of_birth?.trim();
         const caption = place ? `${name} — рождение (${place})` : `${name} — рождение`;
-        const popup = `<div style="padding:4px 0;max-width:260px;font-size:14px;line-height:1.35">${caption}<br/><a href="/person/${p.id}">Открыть карточку</a></div>`;
-        const cm = L.circleMarker(latlng, {
-          radius: 8,
-          color: '#1565c0',
-          weight: 2,
-          fillColor: '#1565c0',
-          fillOpacity: 0.85,
-        }).bindPopup(popup);
-        layer.addLayer(cm);
+        addMarker(p.birth_latitude, p.birth_longitude, BIRTH_MARKER_COLOR, caption, p.id);
       }
       if (p.death_latitude != null && p.death_longitude != null) {
-        const latlng: L.LatLngTuple = [p.death_latitude, p.death_longitude];
-        bounds.extend(latlng);
         const place = p.location_of_death?.trim();
         const caption = place ? `${name} — смерть (${place})` : `${name} — смерть`;
-        const popup = `<div style="padding:4px 0;max-width:260px;font-size:14px;line-height:1.35">${caption}<br/><a href="/person/${p.id}">Открыть карточку</a></div>`;
-        const cm = L.circleMarker(latlng, {
-          radius: 8,
-          color: '#c62828',
-          weight: 2,
-          fillColor: '#c62828',
-          fillOpacity: 0.85,
-        }).bindPopup(popup);
-        layer.addLayer(cm);
+        addMarker(p.death_latitude, p.death_longitude, DEATH_MARKER_COLOR, caption, p.id);
       }
     }
 
-    if (!bounds.isValid()) {
-      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    if (!hasPoint) {
+      map.setCenter(DEFAULT_CENTER);
+      map.setZoom(DEFAULT_ZOOM);
       return;
     }
 
-    const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
-    if (sw.lat === ne.lat && sw.lng === ne.lng) {
-      map.setView(sw, 10);
+    const sw = bounds.getSouthWest();
+    if (ne.lat() === sw.lat() && ne.lng() === sw.lng()) {
+      map.setCenter(bounds.getCenter());
+      map.setZoom(10);
       return;
     }
 
-    map.fitBounds(bounds, { padding: [48, 48], maxZoom: 14 });
+    map.fitBounds(bounds, FIT_BOUNDS_PADDING);
+    google.maps.event.addListenerOnce(map, 'idle', () => {
+      const zoom = map.getZoom();
+      if (zoom != null && zoom > FIT_BOUNDS_MAX_ZOOM) {
+        map.setZoom(FIT_BOUNDS_MAX_ZOOM);
+      }
+    });
   }, [mapReady, people, filterIds]);
+
+  const displayError = mapLoadError ?? error;
 
   return (
     <Box
@@ -169,7 +215,6 @@ export function MapPage() {
         minHeight: 320,
         position: 'relative',
         bgcolor: 'action.hover',
-        '& .leaflet-container': { fontFamily: 'inherit' },
       }}
     >
       <Paper
@@ -215,13 +260,13 @@ export function MapPage() {
         />
         <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <FiberManualRecordIcon sx={{ fontSize: 14, color: '#1565c0' }} aria-hidden />
+            <FiberManualRecordIcon sx={{ fontSize: 14, color: BIRTH_MARKER_COLOR }} aria-hidden />
             <Typography variant="caption" color="text.secondary" component="span">
               — место рождения
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <FiberManualRecordIcon sx={{ fontSize: 14, color: '#c62828' }} aria-hidden />
+            <FiberManualRecordIcon sx={{ fontSize: 14, color: DEATH_MARKER_COLOR }} aria-hidden />
             <Typography variant="caption" color="text.secondary" component="span">
               — место смерти
             </Typography>
@@ -239,12 +284,12 @@ export function MapPage() {
           size={28}
         />
       )}
-      {error && (
+      {displayError && (
         <Alert
           severity="error"
           sx={{ position: 'absolute', top: 8, left: 8, right: 8, zIndex: 1000 }}
         >
-          {error}
+          {displayError}
         </Alert>
       )}
       <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />

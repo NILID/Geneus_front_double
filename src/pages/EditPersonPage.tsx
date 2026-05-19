@@ -28,10 +28,10 @@ import {
 import { PersonProfileShell } from '../components/PersonProfileShell';
 import { PlaceAutocomplete } from '../components/PlaceAutocomplete';
 import { SettlementMapPicker } from '../components/SettlementMapPicker';
-import type { PlaceSuggestion } from '../lib/osmGeocode';
+import type { PlaceSuggestion } from '../lib/placeGeocode';
 import { extractGenealogyYear } from '../lib/genealogyDateFormat';
 import { buildFamilyTreeHref } from '../lib/familyChartNavigation';
-import { resolvePlaceCoordinates } from '../lib/osmGeocode';
+import { resolvePlaceCoordinates } from '../lib/placeGeocode';
 import { SessionLoading } from '../components/SessionLoading';
 import { useAuth } from '../auth/AuthContext';
 

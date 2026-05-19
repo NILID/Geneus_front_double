@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
-import type { PlaceSuggestion } from '../lib/osmGeocode';
-import { searchPhotonPlaces } from '../lib/osmGeocode';
+import type { PlaceSuggestion } from '../lib/placeGeocode';
+import { searchPlaces } from '../lib/placeGeocode';
 
 export interface PlaceAutocompleteProps {
   fieldLabel: string;
@@ -34,7 +34,7 @@ export function PlaceAutocomplete({
     }
     const timer = window.setTimeout(() => {
       setLoading(true);
-      searchPhotonPlaces(q, 12)
+      searchPlaces(q, 12)
         .then(setOptions)
         .catch(() => setOptions([]))
         .finally(() => setLoading(false));

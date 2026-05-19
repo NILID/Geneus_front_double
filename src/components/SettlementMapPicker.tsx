@@ -1,26 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
-import L from 'leaflet';
-import type { PlaceSuggestion } from '../lib/osmGeocode';
-import { reverseGeocodeToLabel } from '../lib/osmGeocode';
+import type { PlaceSuggestion } from '../lib/placeGeocode';
+import { reverseGeocodeToLabel } from '../lib/placeGeocode';
+import { getGoogleMapsApiKey, loadGoogleMaps } from '../lib/googleMapsLoader';
+import { settlementPickerMarkerIcon } from '../lib/mapMarkers';
 
-const DEFAULT_CENTER: L.LatLngTuple = [55.751574, 37.573856];
+const DEFAULT_CENTER = { lat: 55.751574, lng: 37.573856 };
 const DEFAULT_ZOOM = 4;
-const OSM_TILE = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-
-function markerIcon(variant: 'birth' | 'death'): L.DivIcon {
-  const color = variant === 'birth' ? '#1565c0' : '#c62828';
-  return L.divIcon({
-    className: 'settlement-map-marker',
-    html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-  });
-}
 
 export interface SettlementMapPickerProps {
   title: string;
@@ -38,52 +27,77 @@ export function SettlementMapPicker({
   disabled,
 }: SettlementMapPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerLayerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
   const [busy, setBusy] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) {
       return;
     }
+    if (!getGoogleMapsApiKey()) {
+      setMapError('Не задан REACT_APP_GOOGLE_MAPS_API_KEY');
+      return;
+    }
 
-    const map = L.map(el, { zoomControl: true }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
-    mapRef.current = map;
-    L.tileLayer(OSM_TILE, { attribution: OSM_ATTRIBUTION, maxZoom: 19 }).addTo(map);
+    let cancelled = false;
 
-    map.on('click', async (e: L.LeafletMouseEvent) => {
-      if (disabledRef.current) {
-        return;
-      }
-      const { lat, lng } = e.latlng;
-      setBusy(true);
-      try {
-        let label = await reverseGeocodeToLabel(lat, lng);
-        if (!label) {
-          label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    loadGoogleMaps()
+      .then((g) => {
+        if (cancelled || !containerRef.current) {
+          return;
         }
-        onPickRef.current({
-          id: `map-${Date.now()}`,
-          label,
-          lat,
-          lng,
+        const map = new g.maps.Map(containerRef.current, {
+          center: DEFAULT_CENTER,
+          zoom: DEFAULT_ZOOM,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
         });
-      } finally {
-        setBusy(false);
-      }
-    });
+        mapRef.current = map;
 
-    const t = window.setTimeout(() => map.invalidateSize(), 100);
+        clickListenerRef.current = map.addListener('click', async (e: google.maps.MapMouseEvent) => {
+          if (disabledRef.current || e.latLng == null) {
+            return;
+          }
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+          setBusy(true);
+          try {
+            let label = await reverseGeocodeToLabel(lat, lng);
+            if (!label) {
+              label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
+            onPickRef.current({
+              id: `map-${Date.now()}`,
+              label,
+              lat,
+              lng,
+            });
+          } finally {
+            setBusy(false);
+          }
+        });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setMapError(err instanceof Error ? err.message : 'Не удалось загрузить карту');
+        }
+      });
 
     return () => {
-      window.clearTimeout(t);
-      markerLayerRef.current = null;
-      map.remove();
+      cancelled = true;
+      clickListenerRef.current?.remove();
+      clickListenerRef.current = null;
+      markerRef.current?.setMap(null);
+      markerRef.current = null;
       mapRef.current = null;
     };
   }, []);
@@ -93,16 +107,21 @@ export function SettlementMapPicker({
     if (!map) {
       return;
     }
-    if (markerLayerRef.current) {
-      map.removeLayer(markerLayerRef.current);
-      markerLayerRef.current = null;
-    }
+    markerRef.current?.setMap(null);
+    markerRef.current = null;
+
     if (marker) {
-      const m = L.marker([marker.lat, marker.lng], { icon: markerIcon(variant) }).addTo(map);
-      markerLayerRef.current = m;
-      map.setView([marker.lat, marker.lng], 12);
+      const position = { lat: marker.lat, lng: marker.lng };
+      markerRef.current = new google.maps.Marker({
+        map,
+        position,
+        icon: settlementPickerMarkerIcon(google, variant),
+      });
+      map.setCenter(position);
+      map.setZoom(12);
     } else {
-      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+      map.setCenter(DEFAULT_CENTER);
+      map.setZoom(DEFAULT_ZOOM);
     }
   }, [marker, variant]);
 
@@ -114,6 +133,11 @@ export function SettlementMapPicker({
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
         Клик по карте подставит населённый пункт в поле выше и сохранит координаты для общей карты.
       </Typography>
+      {mapError && (
+        <Alert severity="warning" sx={{ mb: 1 }}>
+          {mapError}
+        </Alert>
+      )}
       <Box sx={{ position: 'relative', borderRadius: 1, overflow: 'hidden' }}>
         {busy && (
           <CircularProgress
@@ -136,7 +160,6 @@ export function SettlementMapPicker({
             bgcolor: 'action.hover',
             opacity: disabled ? 0.55 : 1,
             pointerEvents: disabled ? 'none' : 'auto',
-            '& .leaflet-container': { fontFamily: 'inherit' },
           }}
         />
       </Box>
