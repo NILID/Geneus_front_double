@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -34,8 +34,33 @@ export function SettlementMapPicker({
   onPickRef.current = onPick;
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
+  const markerPropRef = useRef(marker);
+  markerPropRef.current = marker;
   const [busy, setBusy] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  const syncMarker = useCallback(
+    (map: google.maps.Map, next: { lat: number; lng: number } | null) => {
+      markerRef.current?.setMap(null);
+      markerRef.current = null;
+
+      if (next) {
+        const position = { lat: next.lat, lng: next.lng };
+        markerRef.current = new google.maps.Marker({
+          map,
+          position,
+          icon: settlementPickerMarkerIcon(google, variant),
+        });
+        map.setCenter(position);
+        map.setZoom(12);
+      } else {
+        map.setCenter(DEFAULT_CENTER);
+        map.setZoom(DEFAULT_ZOOM);
+      }
+    },
+    [variant],
+  );
 
   useEffect(() => {
     const el = containerRef.current;
@@ -48,6 +73,7 @@ export function SettlementMapPicker({
     }
 
     let cancelled = false;
+    let resizeTimer: number | undefined;
 
     loadGoogleMaps()
       .then((g) => {
@@ -62,6 +88,11 @@ export function SettlementMapPicker({
           fullscreenControl: false,
         });
         mapRef.current = map;
+        setMapReady(true);
+        syncMarker(map, markerPropRef.current);
+        resizeTimer = window.setTimeout(() => {
+          google.maps.event.trigger(map, 'resize');
+        }, 100);
 
         clickListenerRef.current = map.addListener('click', async (e: google.maps.MapMouseEvent) => {
           if (disabledRef.current || e.latLng == null) {
@@ -94,36 +125,25 @@ export function SettlementMapPicker({
 
     return () => {
       cancelled = true;
+      if (resizeTimer != null) {
+        window.clearTimeout(resizeTimer);
+      }
       clickListenerRef.current?.remove();
       clickListenerRef.current = null;
       markerRef.current?.setMap(null);
       markerRef.current = null;
       mapRef.current = null;
+      setMapReady(false);
     };
-  }, []);
+  }, [syncMarker]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) {
+    if (!mapReady || !map) {
       return;
     }
-    markerRef.current?.setMap(null);
-    markerRef.current = null;
-
-    if (marker) {
-      const position = { lat: marker.lat, lng: marker.lng };
-      markerRef.current = new google.maps.Marker({
-        map,
-        position,
-        icon: settlementPickerMarkerIcon(google, variant),
-      });
-      map.setCenter(position);
-      map.setZoom(12);
-    } else {
-      map.setCenter(DEFAULT_CENTER);
-      map.setZoom(DEFAULT_ZOOM);
-    }
-  }, [marker, variant]);
+    syncMarker(map, marker);
+  }, [mapReady, marker, syncMarker]);
 
   return (
     <Box>
