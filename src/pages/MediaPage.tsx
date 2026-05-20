@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
-import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Dialog from '@mui/material/Dialog';
@@ -27,8 +26,10 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { canEditGenealogy } from '../auth/roles';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
+import { GalleryPhotoTagPeopleDialog } from '../components/GalleryPhotoTagPeopleDialog';
 import { SessionLoading } from '../components/SessionLoading';
 import { chartPeopleAsTagOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
+import type { GalleryPersonTagInput } from '../gallery/galleryPhotoRegion';
 
 type YearFilterValue = 'all' | 'none' | number;
 
@@ -62,10 +63,13 @@ export function MediaPage() {
   const [editCaption, setEditCaption] = useState('');
   const [editTakenYear, setEditTakenYear] = useState('');
   const [editFile, setEditFile] = useState<File | null>(null);
-  const [editTagIds, setEditTagIds] = useState<number[]>([]);
   const [chartPeople, setChartPeople] = useState<ChartPersonOption[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  const [tagPhoto, setTagPhoto] = useState<GalleryPhoto | null>(null);
+  const [tagSaving, setTagSaving] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
   const [yearFilter, setYearFilter] = useState<YearFilterValue>('all');
 
   const takenYearsInGallery = useMemo(() => distinctTakenYears(photos), [photos]);
@@ -195,7 +199,6 @@ export function MediaPage() {
     setEditCaption('');
     setEditTakenYear('');
     setEditFile(null);
-    setEditTagIds([]);
     setEditError(null);
     if (editFileInputRef.current) {
       editFileInputRef.current.value = '';
@@ -226,7 +229,6 @@ export function MediaPage() {
         caption: cap,
         taken_year: takenYear,
         image: editFile ?? undefined,
-        person_ids: editTagIds,
       });
       await load();
       closeEditDialog();
@@ -234,6 +236,28 @@ export function MediaPage() {
       setEditError(e instanceof Error ? e.message : 'Не удалось сохранить');
     } finally {
       setEditSaving(false);
+    }
+  }
+
+  function closeTagDialog() {
+    setTagPhoto(null);
+    setTagError(null);
+  }
+
+  async function handleSaveTags(tags: GalleryPersonTagInput[]) {
+    if (!tagPhoto) {
+      return;
+    }
+    setTagSaving(true);
+    setTagError(null);
+    try {
+      const updated = await updateGalleryPhoto(tagPhoto.id, { person_tags: tags });
+      setPhotos((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      closeTagDialog();
+    } catch (e: unknown) {
+      setTagError(e instanceof Error ? e.message : 'Не удалось сохранить отметки');
+    } finally {
+      setTagSaving(false);
     }
   }
 
@@ -367,7 +391,6 @@ export function MediaPage() {
                       : '',
                   );
                   setEditFile(null);
-                  setEditTagIds((item.tagged_people ?? []).map((p) => p.id));
                   setEditError(null);
                   if (editFileInputRef.current) {
                     editFileInputRef.current.value = '';
@@ -375,9 +398,27 @@ export function MediaPage() {
                 }
               : undefined
           }
+          onTagPeople={
+            canEdit
+              ? (item) => {
+                  setTagPhoto(item as GalleryPhoto);
+                  setTagError(null);
+                }
+              : undefined
+          }
           onDelete={canEdit ? (photoId) => void handleDelete(photoId) : undefined}
         />
       </Stack>
+
+      <GalleryPhotoTagPeopleDialog
+        photo={tagPhoto}
+        chartPeople={chartPeople}
+        open={Boolean(tagPhoto)}
+        saving={tagSaving}
+        error={tagError}
+        onClose={closeTagDialog}
+        onSave={handleSaveTags}
+      />
 
       <Dialog open={Boolean(editPhoto)} onClose={() => !editSaving && closeEditDialog()} fullWidth maxWidth="sm">
         <DialogTitle>Редактировать фото</DialogTitle>
@@ -420,22 +461,6 @@ export function MediaPage() {
             >
               {editFile ? `Новый файл: ${editFile.name}` : 'Заменить изображение (необязательно)'}
             </Button>
-            <Autocomplete
-              multiple
-              options={chartPeople}
-              getOptionLabel={(o) => o.label}
-              isOptionEqualToValue={(a, b) => a.id === b.id}
-              value={chartPeople.filter((o) => editTagIds.includes(o.id))}
-              onChange={(_, v) => setEditTagIds(v.map((o) => o.id))}
-              disabled={editSaving}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Отмеченные на фото персоны"
-                  placeholder={chartPeople.length ? 'Выберите из древа' : 'Загрузите древо или откройте позже'}
-                />
-              )}
-            />
             {editError && (
               <Alert severity="error" role="alert">
                 {editError}

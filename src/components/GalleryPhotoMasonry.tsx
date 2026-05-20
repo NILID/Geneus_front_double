@@ -29,11 +29,13 @@ function GearIcon(props: SvgIconProps) {
 function OwnerPhotoMenu({
   menuInstanceId,
   onEdit,
+  onTagPeople,
   onDelete,
 }: {
   menuInstanceId: string;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onTagPeople?: () => void;
+  onDelete?: () => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -59,22 +61,36 @@ function OwnerPhotoMenu({
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <MenuItem
-          onClick={() => {
-            setAnchorEl(null);
-            onEdit();
-          }}
-        >
-          Редактировать
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setAnchorEl(null);
-            onDelete();
-          }}
-        >
-          Удалить
-        </MenuItem>
+        {onEdit ? (
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              onEdit();
+            }}
+          >
+            Редактировать
+          </MenuItem>
+        ) : null}
+        {onTagPeople ? (
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              onTagPeople();
+            }}
+          >
+            Отметить персон
+          </MenuItem>
+        ) : null}
+        {onDelete ? (
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              onDelete();
+            }}
+          >
+            Удалить
+          </MenuItem>
+        ) : null}
       </Menu>
     </>
   );
@@ -88,6 +104,8 @@ export interface GalleryPhotoMasonryProps {
   title?: React.ReactNode;
   currentUserId?: number | null;
   onEdit?: (item: GalleryMasonryItem) => void;
+  /** Разметка персон на фото (отдельно от редактирования метаданных). */
+  onTagPeople?: (item: GalleryMasonryItem) => void;
   onDelete?: (id: number) => void;
   /** Префикс для id меню (уникальность при нескольких галереях на странице) */
   menuIdPrefix?: string;
@@ -103,6 +121,7 @@ export function GalleryPhotoMasonry({
   title,
   currentUserId,
   onEdit,
+  onTagPeople,
   onDelete,
   menuIdPrefix = 'gallery-photo',
   onGalleryPhotoCommentsCountChange,
@@ -116,7 +135,7 @@ export function GalleryPhotoMasonry({
     return null;
   }
 
-  const canManage = Boolean(onEdit && onDelete && currentUserId != null);
+  const canManage = Boolean(currentUserId != null && (onEdit || onTagPeople || onDelete));
 
   return (
     <Box sx={sx}>
@@ -203,8 +222,9 @@ export function GalleryPhotoMasonry({
                   isOwner ? (
                     <OwnerPhotoMenu
                       menuInstanceId={`${menuIdPrefix}-menu-${reactId}-${item.id}`}
-                      onEdit={() => onEdit!(item)}
-                      onDelete={() => onDelete!(item.id)}
+                      onEdit={onEdit ? () => onEdit(item) : undefined}
+                      onTagPeople={onTagPeople ? () => onTagPeople(item) : undefined}
+                      onDelete={onDelete ? () => onDelete(item.id) : undefined}
                     />
                   ) : undefined
                 }

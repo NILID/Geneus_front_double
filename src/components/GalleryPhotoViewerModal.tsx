@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
@@ -14,6 +14,7 @@ import { resolveRailsBlobUrl } from '../api/assetUrls';
 import type { GalleryMasonryItem } from '../api/galleryPhotoApi';
 
 import { GalleryPhotoCommentsPanel } from './GalleryPhotoCommentsPanel';
+import { GalleryPhotoRegionOverlay } from './GalleryPhotoRegionOverlay';
 import { GalleryPhotoTaggedPeopleLinks } from './GalleryPhotoTaggedPeople';
 
 function formatMetaDate(iso: string): string {
@@ -48,6 +49,7 @@ export function GalleryPhotoViewerModal({
 }: GalleryPhotoViewerModalProps) {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
+  const [hoveredPersonId, setHoveredPersonId] = useState<number | null>(null);
 
   const safeLen = photos.length;
   const safeIndex = safeLen > 0 ? Math.min(Math.max(index, 0), safeLen - 1) : 0;
@@ -66,6 +68,10 @@ export function GalleryPhotoViewerModal({
     }
     onIndexChange((safeIndex + 1) % safeLen);
   }, [onIndexChange, safeIndex, safeLen]);
+
+  useEffect(() => {
+    setHoveredPersonId(null);
+  }, [item?.id, open]);
 
   useEffect(() => {
     if (!open) {
@@ -139,7 +145,13 @@ export function GalleryPhotoViewerModal({
         </Typography>
         {tagged.length > 0 ? (
           <Box sx={{ color: 'grey.400', typography: 'body2' }}>
-            <GalleryPhotoTaggedPeopleLinks tagged={tagged} onPersonClick={onClose} />
+            <GalleryPhotoTaggedPeopleLinks
+              tagged={tagged}
+              onPersonClick={onClose}
+              onPersonHighlight={setHoveredPersonId}
+              highlightedPersonId={hoveredPersonId}
+              showTouchHint
+            />
           </Box>
         ) : null}
         <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mt: 1 }}>
@@ -234,19 +246,30 @@ export function GalleryPhotoViewerModal({
 
             {resolveRailsBlobUrl(item.image_url) ? (
               <Box
-                component="img"
-                src={resolveRailsBlobUrl(item.image_url)}
-                alt={item.caption ?? ''}
                 sx={{
-                  maxWidth: '100%',
                   maxHeight: { xs: 'min(52vh, 520px)', md: 'calc(100vh - 32px)' },
-                  width: 'auto',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  userSelect: 'none',
-                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
+              >
+              <GalleryPhotoRegionOverlay
+                imageUrl={resolveRailsBlobUrl(item.image_url)!}
+                alt={item.caption ?? ''}
+                maxHeight="100%"
+                highlights={
+                  hoveredPersonId != null
+                    ? tagged
+                        .filter((p) => p.id === hoveredPersonId && p.region != null)
+                        .map((p) => ({
+                          personId: p.id,
+                          region: p.region!,
+                          active: true,
+                        }))
+                    : []
+                }
               />
+              </Box>
             ) : (
               <Typography color="grey.500">Нет изображения</Typography>
             )}

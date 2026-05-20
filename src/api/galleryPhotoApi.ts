@@ -1,5 +1,6 @@
 import { API_BASE } from '../auth/authApi';
 import { getStoredToken } from '../auth/storage';
+import { normalizeRegion, type GalleryPersonTagInput } from '../gallery/galleryPhotoRegion';
 import { MAX_COMMENT_BODY } from './ideaApi';
 import type { IdeaComment } from './ideaApi';
 
@@ -12,6 +13,7 @@ export interface GalleryTaggedPerson {
   chart_external_id: string;
   first_name: string;
   last_name: string | null;
+  region?: { x: number; y: number; width: number; height: number } | null;
 }
 
 /** Элемент сетки галереи и полноэкранного просмотра */
@@ -90,6 +92,13 @@ export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
   return list.map(normalizeGalleryPhoto);
 }
 
+function normalizeTaggedPerson(p: GalleryTaggedPerson): GalleryTaggedPerson {
+  return {
+    ...p,
+    region: normalizeRegion(p.region),
+  };
+}
+
 export function normalizeGalleryPhoto(p: GalleryPhoto): GalleryPhoto {
   const ty = p.taken_year;
   const cc = p.comments_count;
@@ -98,10 +107,14 @@ export function normalizeGalleryPhoto(p: GalleryPhoto): GalleryPhoto {
     user_id: typeof p.user_id === 'number' ? p.user_id : 0,
     uploaded_by_email: p.uploaded_by_email ?? null,
     taken_year: typeof ty === 'number' && !Number.isNaN(ty) ? ty : null,
-    tagged_people: Array.isArray(p.tagged_people) ? p.tagged_people : [],
+    tagged_people: Array.isArray(p.tagged_people)
+      ? p.tagged_people.map((t) => normalizeTaggedPerson(t as GalleryTaggedPerson))
+      : [],
     comments_count: typeof cc === 'number' && !Number.isNaN(cc) ? cc : 0,
   };
 }
+
+export type { GalleryPersonTagInput };
 
 export async function uploadGalleryPhoto(
   file: File,
@@ -149,6 +162,21 @@ export interface GalleryPhotoUpdateInput {
   image?: File | null;
   /** If set (including []), server replaces tags. Omit to leave tags unchanged. */
   person_ids?: number[];
+  /** Полная замена отметок с координатами областей (приоритетнее person_ids). */
+  person_tags?: GalleryPersonTagInput[];
+}
+
+function personTagsToPayload(tags: GalleryPersonTagInput[]): Record<string, unknown>[] {
+  return tags.map((t) => {
+    const row: Record<string, unknown> = { person_id: t.person_id };
+    if (t.region) {
+      row.region_x = t.region.x;
+      row.region_y = t.region.y;
+      row.region_width = t.region.width;
+      row.region_height = t.region.height;
+    }
+    return row;
+  });
 }
 
 async function patchGalleryPhotoJson(
@@ -195,7 +223,13 @@ export async function updateGalleryPhoto(
       );
     }
     fd.append('gallery_photo[image]', input.image!);
-    if (input.person_ids !== undefined) {
+    if (input.person_tags !== undefined) {
+      for (const tag of personTagsToPayload(input.person_tags)) {
+        for (const [k, v] of Object.entries(tag)) {
+          fd.append(`gallery_photo[person_tags][][${k}]`, String(v));
+        }
+      }
+    } else if (input.person_ids !== undefined) {
       for (const pid of input.person_ids) {
         fd.append('gallery_photo[person_ids][]', String(pid));
       }
@@ -218,8 +252,9 @@ export async function updateGalleryPhoto(
       throw new Error('Некорректный ответ сервера');
     }
     let result = normalizeGalleryPhoto(photo);
-    // multipart не передаёт пустой массив person_ids — вторым запросом синхронизируем отметки
-    if (input.person_ids !== undefined && input.person_ids.length === 0) {
+    if (input.person_tags !== undefined && input.person_tags.length === 0) {
+      result = await patchGalleryPhotoJson(id, { person_tags: [] });
+    } else if (input.person_ids !== undefined && input.person_ids.length === 0) {
       result = await patchGalleryPhotoJson(id, { person_ids: [] });
     }
     return result;
@@ -234,7 +269,9 @@ export async function updateGalleryPhoto(
     payload.taken_year =
       input.taken_year == null || Number.isNaN(input.taken_year) ? null : input.taken_year;
   }
-  if (input.person_ids !== undefined) {
+  if (input.person_tags !== undefined) {
+    payload.person_tags = personTagsToPayload(input.person_tags);
+  } else if (input.person_ids !== undefined) {
     payload.person_ids = input.person_ids;
   }
   if (Object.keys(payload).length === 0) {
