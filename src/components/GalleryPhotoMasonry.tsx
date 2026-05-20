@@ -78,7 +78,7 @@ function OwnerPhotoMenu({
               onTagPeople();
             }}
           >
-            Отметить персон
+            Отметить персону
           </MenuItem>
         ) : null}
         {onDelete ? (
