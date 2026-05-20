@@ -13,7 +13,9 @@ import {
   personDisplayName,
   type PersonMapLocation,
 } from '../api/personApi';
+import { resolveRailsBlobUrl } from '../api/assetUrls';
 import { getGoogleMapsApiKey, loadGoogleMaps } from '../lib/googleMapsLoader';
+import { buildMapInfoWindowHtml } from '../lib/mapInfoWindow';
 import {
   BIRTH_MARKER_COLOR,
   DEATH_MARKER_COLOR,
@@ -146,10 +148,20 @@ export function MapPage() {
     const bounds = new google.maps.LatLngBounds();
     let hasPoint = false;
 
-    const addMarker = (lat: number, lng: number, color: string, caption: string, personId: number) => {
+    const addMarker = (
+      lat: number,
+      lng: number,
+      color: string,
+      person: PersonMapLocation,
+      kind: 'birth' | 'death',
+    ) => {
       const position = { lat, lng };
       bounds.extend(position);
       hasPoint = true;
+      const name = personDisplayName(person);
+      const place =
+        kind === 'birth' ? person.location_of_birth?.trim() : person.location_of_death?.trim();
+      const caption = place ? `${name} — ${kind === 'birth' ? 'рождение' : 'смерть'} (${place})` : `${name} — ${kind === 'birth' ? 'рождение' : 'смерть'}`;
       const marker = new google.maps.Marker({
         map,
         position,
@@ -157,7 +169,13 @@ export function MapPage() {
         title: caption,
       });
       const infoWindow = new google.maps.InfoWindow({
-        content: `<div style="padding:4px 0;max-width:260px;font-size:14px;line-height:1.35">${caption}<br/><a href="/person/${personId}">Открыть карточку</a></div>`,
+        content: buildMapInfoWindowHtml({
+          personId: person.id,
+          name,
+          kind,
+          place: place || undefined,
+          avatarUrl: resolveRailsBlobUrl(person.avatar_url),
+        }),
       });
       marker.addListener('click', () => {
         for (const entry of markersRef.current) {
@@ -169,16 +187,11 @@ export function MapPage() {
     };
 
     for (const p of visible) {
-      const name = personDisplayName(p);
       if (p.birth_latitude != null && p.birth_longitude != null) {
-        const place = p.location_of_birth?.trim();
-        const caption = place ? `${name} — рождение (${place})` : `${name} — рождение`;
-        addMarker(p.birth_latitude, p.birth_longitude, BIRTH_MARKER_COLOR, caption, p.id);
+        addMarker(p.birth_latitude, p.birth_longitude, BIRTH_MARKER_COLOR, p, 'birth');
       }
       if (p.death_latitude != null && p.death_longitude != null) {
-        const place = p.location_of_death?.trim();
-        const caption = place ? `${name} — смерть (${place})` : `${name} — смерть`;
-        addMarker(p.death_latitude, p.death_longitude, DEATH_MARKER_COLOR, caption, p.id);
+        addMarker(p.death_latitude, p.death_longitude, DEATH_MARKER_COLOR, p, 'death');
       }
     }
 

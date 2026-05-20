@@ -53,6 +53,7 @@ export interface PersonMapLocation {
   chart_external_id: string;
   first_name: string;
   last_name: string | null;
+  avatar_url: string | null;
   location_of_birth: string | null;
   location_of_death: string | null;
   birth_latitude: number | null;
