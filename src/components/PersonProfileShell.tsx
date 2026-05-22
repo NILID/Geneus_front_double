@@ -46,6 +46,7 @@ export function PersonProfileShell({
   children: React.ReactNode;
 }) {
   const base = `/person/${encodeURIComponent(personId)}`;
+  const isEditMode = activeTab === 'edit';
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100%', pb: 4 }}>
@@ -69,58 +70,81 @@ export function PersonProfileShell({
             mb: 2,
           }}
         >
-          <Box sx={{ px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 2.5 }, pb: 0, bgcolor: 'background.paper' }}>
+          <Box
+            sx={{
+              px: { xs: 2, sm: 3 },
+              py: isEditMode ? { xs: 1.5, sm: 2 } : undefined,
+              pt: isEditMode ? undefined : { xs: 2, sm: 2.5 },
+              pb: isEditMode ? undefined : 0,
+              bgcolor: 'background.paper',
+            }}
+          >
             <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
+              direction={isEditMode ? 'row' : { xs: 'column', sm: 'row' }}
+              spacing={isEditMode ? 1.5 : 2}
               sx={{
-                alignItems: { xs: 'center', sm: 'center' },
+                alignItems: isEditMode ? 'center' : { xs: 'center', sm: 'center' },
                 justifyContent: 'space-between',
               }}
             >
               <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
+                direction={isEditMode ? 'row' : { xs: 'column', sm: 'row' }}
+                spacing={isEditMode ? 1.5 : 2}
                 sx={{
-                  alignItems: { xs: 'center', sm: 'center' },
+                  alignItems: isEditMode ? 'center' : { xs: 'center', sm: 'center' },
                   flex: 1,
                   minWidth: 0,
-                  width: '100%',
+                  width: isEditMode ? undefined : { xs: '100%', sm: 'auto' },
                 }}
               >
                 <MuiAvatar
                   src={resolveRailsBlobUrl(person.avatar_url)}
                   alt={personDisplayName(person)}
-                  sx={{
-                    width: { xs: 132, sm: 168 },
-                    height: { xs: 132, sm: 168 },
-                    flexShrink: 0,
-                    border: (t) => `4px solid ${t.palette.background.paper}`,
-                    boxShadow: 2,
-                    fontSize: { xs: '2.5rem', sm: '3rem' },
-                  }}
+                  sx={
+                    isEditMode
+                      ? {
+                          width: 40,
+                          height: 40,
+                          flexShrink: 0,
+                          fontSize: '0.875rem',
+                        }
+                      : {
+                          width: { xs: 132, sm: 168 },
+                          height: { xs: 132, sm: 168 },
+                          flexShrink: 0,
+                          border: (t) => `4px solid ${t.palette.background.paper}`,
+                          boxShadow: 2,
+                          fontSize: { xs: '2.5rem', sm: '3rem' },
+                        }
+                  }
                 >
                   {resolveRailsBlobUrl(person.avatar_url) ? null : personAvatarFallback(person)}
                 </MuiAvatar>
 
                 <Box
                   sx={{
-                    textAlign: { xs: 'center', sm: 'left' },
                     minWidth: 0,
+                    textAlign: isEditMode ? 'left' : { xs: 'center', sm: 'left' },
                   }}
                 >
                   <Typography
-                    variant="h4"
+                    variant={isEditMode ? 'subtitle1' : 'h4'}
                     component="h1"
-                    sx={{ fontWeight: 700, lineHeight: 1.2, wordBreak: 'break-word' }}
+                    sx={{
+                      fontWeight: 700,
+                      lineHeight: 1.2,
+                      wordBreak: 'break-word',
+                    }}
                   >
                     {personDisplayName(person)}
                   </Typography>
-                  {person.chart_id && person.chart_id !== person.chart_external_id && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      ID в древе: {person.chart_id}
-                    </Typography>
-                  )}
+                  {!isEditMode &&
+                    person.chart_id &&
+                    person.chart_id !== person.chart_external_id && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        ID в древе: {person.chart_id}
+                      </Typography>
+                    )}
                 </Box>
               </Stack>
 
@@ -128,8 +152,8 @@ export function PersonProfileShell({
                 direction="row"
                 spacing={1}
                 sx={{
-                  width: { xs: '100%', sm: 'auto' },
-                  justifyContent: { xs: 'center', sm: 'flex-end' },
+                  width: isEditMode ? 'auto' : { xs: '100%', sm: 'auto' },
+                  justifyContent: isEditMode ? 'flex-end' : { xs: 'center', sm: 'flex-end' },
                   flexShrink: 0,
                   flexWrap: 'wrap',
                 }}
@@ -139,14 +163,24 @@ export function PersonProfileShell({
                     component={RouterLink}
                     to={familyTreeTo}
                     variant="outlined"
-                    size="medium"
+                    size={isEditMode ? 'small' : 'medium'}
                     aria-label="К древу"
                     sx={{ textTransform: 'none', fontWeight: 600, minWidth: 40, px: 1 }}
                   >
                     <AccountTree fontSize="small" />
                   </Button>
                 ) : null}
-                {showEditProfileButton ? (
+                {isEditMode ? (
+                  <Button
+                    component={RouterLink}
+                    to={base}
+                    variant="text"
+                    size="small"
+                    sx={{ textTransform: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                  >
+                    К профилю
+                  </Button>
+                ) : showEditProfileButton ? (
                   <Button
                     component={RouterLink}
                     to={`${base}/edit`}
@@ -160,24 +194,26 @@ export function PersonProfileShell({
               </Stack>
             </Stack>
 
-            <Tabs
-              value={activeTab === 'edit' ? false : activeTab}
-              variant="fullWidth"
-              sx={{
-                mt: 2,
-                borderTop: 1,
-                borderColor: 'divider',
-                minHeight: 48,
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 600,
+            {!isEditMode && (
+              <Tabs
+                value={activeTab}
+                variant="fullWidth"
+                sx={{
+                  mt: 2,
+                  borderTop: 1,
+                  borderColor: 'divider',
                   minHeight: 48,
-                },
-              }}
-            >
-              <Tab label="Обзор" value="overview" component={RouterLink} to={base} />
-              <Tab label="Факты" value="facts" component={RouterLink} to={`${base}/facts`} />
-            </Tabs>
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    minHeight: 48,
+                  },
+                }}
+              >
+                <Tab label="Обзор" value="overview" component={RouterLink} to={base} />
+                <Tab label="Факты" value="facts" component={RouterLink} to={`${base}/facts`} />
+              </Tabs>
+            )}
           </Box>
         </Paper>
 

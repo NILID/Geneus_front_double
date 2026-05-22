@@ -345,6 +345,7 @@ export function EditPersonPage() {
       activeTab="edit"
       breadcrumbs={breadcrumbs}
       familyTreeTo={buildFamilyTreeHref(profileForShell)}
+      showEditProfileButton={false}
     >
       <Paper
         elevation={0}

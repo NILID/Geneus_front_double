@@ -32,7 +32,6 @@ import { createInvitationLinkRequest, sendInvitationRequest } from '../auth/auth
 import { useAuth } from '../auth/AuthContext';
 import { canSendInvitations } from '../auth/roles';
 import { fetchGalleryPhotos, type GalleryPhoto } from '../api/galleryPhotoApi';
-import { fetchIdeas, type Idea } from '../api/ideaApi';
 import {
   fetchRecentPeople,
   personDisplayName,
@@ -40,7 +39,6 @@ import {
 } from '../api/personApi';
 
 const HOME_PHOTO_LIMIT = 8;
-const HOME_IDEA_LIMIT = 6;
 
 const INVITE_TAB_EMAIL = 0;
 const INVITE_TAB_LINK = 1;
@@ -79,14 +77,6 @@ function formatRuDateTime(iso: string): string {
   }
 }
 
-function truncateText(text: string, max = 160): string {
-  const t = text.trim();
-  if (t.length <= max) {
-    return t;
-  }
-  return `${t.slice(0, max).trim()}…`;
-}
-
 function NavTileIcon({ children }: { children: React.ReactNode }) {
   return (
     <Box
@@ -113,7 +103,6 @@ export function HomePage() {
   const showInvite = canSendInvitations(user?.role);
   const [people, setPeople] = useState<PersonHomeRow[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
-  const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -137,14 +126,9 @@ export function HomePage() {
     setError(null);
     setLoading(true);
     try {
-      const [ppl, ph, id] = await Promise.all([
-        fetchRecentPeople(),
-        fetchGalleryPhotos(),
-        fetchIdeas(),
-      ]);
+      const [ppl, ph] = await Promise.all([fetchRecentPeople(), fetchGalleryPhotos()]);
       setPeople(ppl);
       setPhotos(ph.slice(0, HOME_PHOTO_LIMIT));
-      setIdeas(id.slice(0, HOME_IDEA_LIMIT));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить главную');
     } finally {
@@ -717,51 +701,6 @@ export function HomePage() {
                     </Grid>
                   ))}
                 </Grid>
-              )}
-            </Box>
-
-            <Box>
-              <Stack
-                direction="row"
-                sx={{ mb: 2, alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-                    Свежие идеи
-                  </Typography>
-                </Stack>
-                <Button component={RouterLink} to="/ideas" size="small" color="inherit">
-                  Все идеи
-                </Button>
-              </Stack>
-              {ideas.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Заметок пока нет — поделитесь мыслью в разделе «Идеи».
-                </Typography>
-              ) : (
-                <Stack spacing={1.5}>
-                  {ideas.map((idea) => (
-                    <Paper key={idea.id} variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                        {formatRuDate(idea.created_at)}
-                        {idea.comments_count > 0
-                          ? ` · ${idea.comments_count} отв.`
-                          : ''}
-                      </Typography>
-                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                        {truncateText(idea.body)}
-                      </Typography>
-                      <Button
-                        component={RouterLink}
-                        to="/ideas"
-                        size="small"
-                        sx={{ mt: 1, p: 0, minWidth: 0 }}
-                      >
-                        Открыть обсуждение
-                      </Button>
-                    </Paper>
-                  ))}
-                </Stack>
               )}
             </Box>
           </Stack>
