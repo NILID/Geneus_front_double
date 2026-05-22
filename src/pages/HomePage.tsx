@@ -38,6 +38,7 @@ import {
   type PersonHomeRow,
 } from '../api/personApi';
 
+const HOME_PEOPLE_LIMIT = 6;
 const HOME_PHOTO_LIMIT = 8;
 
 const INVITE_TAB_EMAIL = 0;
@@ -127,7 +128,7 @@ export function HomePage() {
     setLoading(true);
     try {
       const [ppl, ph] = await Promise.all([fetchRecentPeople(), fetchGalleryPhotos()]);
-      setPeople(ppl);
+      setPeople(ppl.slice(0, HOME_PEOPLE_LIMIT));
       setPhotos(ph.slice(0, HOME_PHOTO_LIMIT));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить главную');
