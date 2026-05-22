@@ -149,3 +149,16 @@ export async function createIdeaComment(
   }
   return { comment: normalizeComment(comment), comments_count: commentsCount };
 }
+
+export async function deleteIdea(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/ideas/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(false),
+  });
+  if (res.status === 404) {
+    throw new Error('Идея не найдена');
+  }
+  if (!res.ok && res.status !== 204) {
+    throw new Error(await parseErrorMessage(res));
+  }
+}

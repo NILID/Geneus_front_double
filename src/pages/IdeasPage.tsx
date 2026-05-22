@@ -18,6 +18,7 @@ import {
   MAX_COMMENT_BODY,
   createIdea,
   createIdeaComment,
+  deleteIdea,
   fetchIdeaComments,
   fetchIdeas,
   type Idea,
@@ -25,6 +26,7 @@ import {
 } from '../api/ideaApi';
 import { SessionLoading } from '../components/SessionLoading';
 import { useAuth } from '../auth/AuthContext';
+import { canDeleteIdeas } from '../auth/roles';
 
 function formatIdeaDate(iso: string): string {
   if (!iso) {
@@ -77,6 +79,10 @@ export function IdeasPage() {
   const [commentBody, setCommentBody] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentFormError, setCommentFormError] = useState<string | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const canDelete = canDeleteIdeas(user?.role);
 
   const load = useCallback(() => {
     setError(null);
@@ -154,6 +160,24 @@ export function IdeasPage() {
       setFormError(err instanceof Error ? err.message : 'Не удалось сохранить');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteIdea() {
+    if (!dialogIdea) {
+      return;
+    }
+    const ideaId = dialogIdea.id;
+    setDeleteError(null);
+    setDeleteSubmitting(true);
+    try {
+      await deleteIdea(ideaId);
+      setDialogIdea(null);
+      setIdeas((prev) => prev.filter((i) => i.id !== ideaId));
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Не удалось удалить');
+    } finally {
+      setDeleteSubmitting(false);
     }
   }
 
@@ -281,7 +305,10 @@ export function IdeasPage() {
 
         <Dialog
           open={dialogIdea != null}
-          onClose={() => setDialogIdea(null)}
+          onClose={() => {
+            setDialogIdea(null);
+            setDeleteError(null);
+          }}
           maxWidth="md"
           fullWidth
           scroll="paper"
@@ -364,11 +391,31 @@ export function IdeasPage() {
                     </Button>
                   </Stack>
                 </Box>
+
+                {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
               </Stack>
             ) : null}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogIdea(null)}>Закрыть</Button>
+          <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+            <Box>
+              {canDelete ? (
+                <Button
+                  color="error"
+                  disabled={deleteSubmitting}
+                  onClick={() => void handleDeleteIdea()}
+                >
+                  {deleteSubmitting ? 'Удаление…' : 'Удалить идею'}
+                </Button>
+              ) : null}
+            </Box>
+            <Button
+              onClick={() => {
+                setDialogIdea(null);
+                setDeleteError(null);
+              }}
+            >
+              Закрыть
+            </Button>
           </DialogActions>
         </Dialog>
       </Stack>
