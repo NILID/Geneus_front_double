@@ -33,9 +33,12 @@ import { canSendInvitations } from '../auth/roles';
 import { fetchGalleryPhotos, type GalleryPhoto } from '../api/galleryPhotoApi';
 import {
   fetchRecentPeople,
+  fetchUpcomingBirthdays,
   personDisplayName,
+  type PersonBirthdayRow,
   type PersonHomeRow,
 } from '../api/personApi';
+import { HomeBirthdaysBlock } from '../components/HomeBirthdaysBlock';
 
 const HOME_PEOPLE_LIMIT = 6;
 const HOME_PHOTO_LIMIT = 8;
@@ -102,6 +105,7 @@ export function HomePage() {
   const { user } = useAuth();
   const showInvite = canSendInvitations(user?.role);
   const [people, setPeople] = useState<PersonHomeRow[]>([]);
+  const [birthdays, setBirthdays] = useState<PersonBirthdayRow[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,8 +130,13 @@ export function HomePage() {
     setError(null);
     setLoading(true);
     try {
-      const [ppl, ph] = await Promise.all([fetchRecentPeople(), fetchGalleryPhotos()]);
+      const [ppl, ph, bdays] = await Promise.all([
+        fetchRecentPeople(),
+        fetchGalleryPhotos(),
+        fetchUpcomingBirthdays(),
+      ]);
       setPeople(ppl.slice(0, HOME_PEOPLE_LIMIT));
+      setBirthdays(bdays);
       setPhotos(ph.slice(0, HOME_PHOTO_LIMIT));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить главную');
@@ -597,6 +606,8 @@ export function HomePage() {
           <Typography color="text.secondary">Загрузка…</Typography>
         ) : (
           <Stack spacing={4}>
+            <HomeBirthdaysBlock birthdays={birthdays} />
+
             <Box>
               <Stack
                 direction="row"

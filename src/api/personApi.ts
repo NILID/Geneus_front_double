@@ -20,6 +20,18 @@ export interface PersonHomeRow {
   updated_at: string;
 }
 
+/** День рождения в окне «позавчера … +7 дней» на главной. */
+export interface PersonBirthdayRow {
+  id: number;
+  chart_external_id: string;
+  first_name: string;
+  last_name: string | null;
+  avatar_url: string | null;
+  days_offset: number;
+  age: number;
+  deceased: boolean;
+}
+
 export interface PersonDetail {
   id: number;
   chart_id: string | null;
@@ -167,6 +179,36 @@ export async function fetchRecentPeople(): Promise<PersonHomeRow[]> {
     throw new Error('Некорректный ответ сервера');
   }
   return o.people;
+}
+
+export async function fetchUpcomingBirthdays(): Promise<PersonBirthdayRow[]> {
+  const res = await fetch(`${API_BASE}/api/v1/people/upcoming_birthdays`, {
+    ...NO_STORE,
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const body: unknown = await res.json();
+      if (body && typeof body === 'object' && typeof (body as { error?: string }).error === 'string') {
+        msg = (body as { error: string }).error;
+      }
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const json: unknown = await res.json();
+  const o = json as { birthdays?: PersonBirthdayRow[] };
+  if (!Array.isArray(o.birthdays)) {
+    throw new Error('Некорректный ответ сервера');
+  }
+  return o.birthdays.map((row) => ({
+    ...row,
+    deceased: Boolean(row.deceased),
+    days_offset: Number(row.days_offset),
+    age: Number(row.age),
+  }));
 }
 
 export async function fetchPeopleMapLocations(): Promise<PersonMapLocation[]> {
