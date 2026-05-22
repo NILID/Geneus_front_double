@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import AccountTree from '@mui/icons-material/AccountTree';
 import MuiAvatar from '@mui/material/Avatar';
@@ -11,6 +11,7 @@ import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import { resolveRailsBlobUrl } from '../api/assetUrls';
 import { personDisplayName, type PersonDetail } from '../api/personApi';
+import { ImageLightboxModal } from './ImageLightboxModal';
 
 export type PersonProfileTab = 'overview' | 'facts' | 'edit';
 
@@ -47,6 +48,32 @@ export function PersonProfileShell({
 }) {
   const base = `/person/${encodeURIComponent(personId)}`;
   const isEditMode = activeTab === 'edit';
+  const avatarUrl = resolveRailsBlobUrl(person.avatar_url);
+  const displayName = personDisplayName(person);
+  const [avatarViewerOpen, setAvatarViewerOpen] = useState(false);
+
+  const avatarSx = isEditMode
+    ? {
+        width: 40,
+        height: 40,
+        flexShrink: 0,
+        fontSize: '0.875rem',
+      }
+    : {
+        width: { xs: 132, sm: 168 },
+        height: { xs: 132, sm: 168 },
+        flexShrink: 0,
+        border: 4,
+        borderColor: 'background.paper',
+        boxShadow: 2,
+        fontSize: { xs: '2.5rem', sm: '3rem' },
+      };
+
+  const avatarNode = (
+    <MuiAvatar src={avatarUrl ?? undefined} alt={displayName} sx={avatarSx}>
+      {avatarUrl ? null : personAvatarFallback(person)}
+    </MuiAvatar>
+  );
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100%', pb: 4 }}>
@@ -97,29 +124,31 @@ export function PersonProfileShell({
                   width: isEditMode ? undefined : { xs: '100%', sm: 'auto' },
                 }}
               >
-                <MuiAvatar
-                  src={resolveRailsBlobUrl(person.avatar_url)}
-                  alt={personDisplayName(person)}
-                  sx={
-                    isEditMode
-                      ? {
-                          width: 40,
-                          height: 40,
-                          flexShrink: 0,
-                          fontSize: '0.875rem',
-                        }
-                      : {
-                          width: { xs: 132, sm: 168 },
-                          height: { xs: 132, sm: 168 },
-                          flexShrink: 0,
-                          border: (t) => `4px solid ${t.palette.background.paper}`,
-                          boxShadow: 2,
-                          fontSize: { xs: '2.5rem', sm: '3rem' },
-                        }
-                  }
-                >
-                  {resolveRailsBlobUrl(person.avatar_url) ? null : personAvatarFallback(person)}
-                </MuiAvatar>
+                {avatarUrl ? (
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => setAvatarViewerOpen(true)}
+                    aria-label="Открыть фото"
+                    sx={{
+                      p: 0,
+                      m: 0,
+                      border: 0,
+                      bgcolor: 'transparent',
+                      cursor: 'pointer',
+                      borderRadius: '50%',
+                      lineHeight: 0,
+                      color: 'inherit',
+                      font: 'inherit',
+                      flexShrink: 0,
+                      '&:hover': { opacity: 0.92 },
+                    }}
+                  >
+                    {avatarNode}
+                  </Box>
+                ) : (
+                  avatarNode
+                )}
 
                 <Box
                   sx={{
@@ -219,6 +248,15 @@ export function PersonProfileShell({
 
         {children}
       </Box>
+
+      {avatarUrl ? (
+        <ImageLightboxModal
+          open={avatarViewerOpen}
+          onClose={() => setAvatarViewerOpen(false)}
+          imageUrl={avatarUrl}
+          alt={displayName}
+        />
+      ) : null}
     </Box>
   );
 }
