@@ -154,9 +154,6 @@ export function GalleryPhotoViewerModal({
             />
           </Box>
         ) : null}
-        <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mt: 1 }}>
-          {safeIndex + 1} из {safeLen}
-        </Typography>
       </Box>
 
       <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', px: 0, pb: 2 }}>
@@ -188,6 +185,8 @@ export function GalleryPhotoViewerModal({
           sx={{
             position: 'absolute',
             inset: 0,
+            height: '100%',
+            maxHeight: '100dvh',
             display: 'flex',
             flexDirection: isNarrow ? 'column' : 'row',
             outline: 0,
@@ -213,18 +212,43 @@ export function GalleryPhotoViewerModal({
 
           <Box
             sx={{
-              flex: '1 1 55%',
+              flex: isNarrow ? '1 1 0' : '1 1 auto',
               minWidth: 0,
               minHeight: 0,
+              height: isNarrow ? undefined : '100%',
+              maxHeight: isNarrow ? 'calc(100dvh - 42vh)' : '100dvh',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
               bgcolor: '#000',
+              overflow: 'hidden',
               py: { xs: 1, md: 2 },
               px: showNav ? { xs: 5, md: 7 } : 2,
             }}
           >
+            <Typography
+              variant="body2"
+              aria-live="polite"
+              sx={{
+                position: 'absolute',
+                top: 12,
+                left: 12,
+                zIndex: 2,
+                color: 'common.white',
+                bgcolor: 'rgba(0,0,0,0.45)',
+                px: 1.25,
+                py: 0.5,
+                borderRadius: 1,
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                pointerEvents: 'none',
+                userSelect: 'none',
+              }}
+            >
+              {safeIndex + 1} из {safeLen}
+            </Typography>
+
             {showNav ? (
               <IconButton
                 onClick={goPrev}
@@ -247,7 +271,10 @@ export function GalleryPhotoViewerModal({
             {resolveRailsBlobUrl(item.image_url) ? (
               <Box
                 sx={{
-                  maxHeight: { xs: 'min(52vh, 520px)', md: 'calc(100vh - 32px)' },
+                  width: '100%',
+                  height: '100%',
+                  maxWidth: '100%',
+                  maxHeight: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -256,7 +283,10 @@ export function GalleryPhotoViewerModal({
               <GalleryPhotoRegionOverlay
                 imageUrl={resolveRailsBlobUrl(item.image_url)!}
                 alt={item.caption ?? ''}
-                maxHeight="100%"
+                maxHeight={
+                  isNarrow ? 'calc(100dvh - 42vh - 16px)' : 'calc(100dvh - 32px)'
+                }
+                maxWidth="100%"
                 highlights={
                   hoveredPersonId != null
                     ? tagged

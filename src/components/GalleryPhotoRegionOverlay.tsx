@@ -31,6 +31,7 @@ interface GalleryPhotoRegionOverlayProps {
   onRegionChange?: (personId: number, region: GalleryPhotoRegion) => void;
   onRegionFocus?: (personId: number) => void;
   maxHeight?: string | number | Record<string, string | number>;
+  maxWidth?: string | number | Record<string, string | number>;
 }
 
 const HANDLE_CURSORS: Record<RegionEditHandle, string> = {
@@ -206,6 +207,7 @@ export function GalleryPhotoRegionOverlay({
   onRegionChange,
   onRegionFocus,
   maxHeight = 'min(60vh, 480px)',
+  maxWidth = '100%',
 }: GalleryPhotoRegionOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -355,7 +357,8 @@ export function GalleryPhotoRegionOverlay({
       sx={{
         position: 'relative',
         display: 'inline-block',
-        maxWidth: '100%',
+        maxWidth,
+        maxHeight,
         lineHeight: 0,
         cursor: drawing ? 'crosshair' : 'default',
         touchAction: overlayInteractive ? 'none' : 'auto',
@@ -409,7 +412,7 @@ export function GalleryPhotoRegionOverlay({
         onLoad={measure}
         sx={{
           display: 'block',
-          maxWidth: '100%',
+          maxWidth,
           maxHeight,
           width: 'auto',
           height: 'auto',

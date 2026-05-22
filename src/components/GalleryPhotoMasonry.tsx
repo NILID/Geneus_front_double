@@ -176,8 +176,7 @@ export function GalleryPhotoMasonry({
           );
           const isOwner = canManage && item.user_id === currentUserId;
           const year = item.taken_year != null && !Number.isNaN(item.taken_year) ? item.taken_year : null;
-          const titleText = item.caption?.trim() ? item.caption : 'Без подписи';
-          const barTitle = year != null ? `${titleText} (${year})` : titleText;
+          const barTitle = year != null ? String(year) : false;
 
           return (
             <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
@@ -206,7 +205,7 @@ export function GalleryPhotoMasonry({
                 >
                   <img
                     src={resolveRailsBlobUrl(item.image_url)}
-                    alt={item.caption ?? ''}
+                    alt={year != null ? `Фото, ${year}` : 'Фото'}
                     loading="lazy"
                     style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
                   />

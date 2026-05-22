@@ -6,7 +6,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
-import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
@@ -673,30 +672,19 @@ export function HomePage() {
                 <Grid container spacing={1.5}>
                   {photos.map((ph) => (
                     <Grid key={ph.id} size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card variant="outlined" sx={{ height: '100%', overflow: 'hidden' }}>
+                      <Card variant="outlined" sx={{ overflow: 'hidden' }}>
                         <CardActionArea component={RouterLink} to="/media">
                           {resolveRailsBlobUrl(ph.image_url) ? (
                             <CardMedia
                               component="img"
                               height="140"
                               image={resolveRailsBlobUrl(ph.image_url)}
-                              alt={ph.caption ?? 'Фото'}
-                              sx={{ objectFit: 'cover' }}
+                              alt="Фото"
+                              sx={{ objectFit: 'cover', display: 'block' }}
                             />
                           ) : (
                             <Box sx={{ height: 140, bgcolor: 'action.hover' }} />
                           )}
-                          <CardContent sx={{ py: 1.5 }}>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                              {formatRuDate(ph.created_at)}
-                              {ph.taken_year != null ? ` · ${ph.taken_year}` : ''}
-                            </Typography>
-                            {ph.caption && (
-                              <Typography variant="body2" noWrap>
-                                {ph.caption}
-                              </Typography>
-                            )}
-                          </CardContent>
                         </CardActionArea>
                       </Card>
                     </Grid>
