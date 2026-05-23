@@ -38,6 +38,7 @@ import {
   type PersonBirthdayRow,
   type PersonHomeRow,
 } from '../api/personApi';
+import { GalleryPhotoViewerModal } from '../components/GalleryPhotoViewerModal';
 import { HomeBirthdaysBlock } from '../components/HomeBirthdaysBlock';
 
 const HOME_PEOPLE_LIMIT = 6;
@@ -125,6 +126,9 @@ export function HomePage() {
     invitation_url: string;
     invitation_expires_at?: string;
   } | null>(null);
+
+  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
+  const [photoViewerIndex, setPhotoViewerIndex] = useState(0);
 
   const load = useCallback(async () => {
     setError(null);
@@ -680,27 +684,48 @@ export function HomePage() {
                   Фотографий пока нет — загрузите первую в разделе «Медиа».
                 </Typography>
               ) : (
-                <Grid container spacing={1.5}>
-                  {photos.map((ph) => (
-                    <Grid key={ph.id} size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Card variant="outlined" sx={{ overflow: 'hidden' }}>
-                        <CardActionArea component={RouterLink} to="/media">
-                          {resolveRailsBlobUrl(ph.image_url) ? (
-                            <CardMedia
-                              component="img"
-                              height="140"
-                              image={resolveRailsBlobUrl(ph.image_url)}
-                              alt="Фото"
-                              sx={{ objectFit: 'cover', display: 'block' }}
-                            />
-                          ) : (
-                            <Box sx={{ height: 140, bgcolor: 'action.hover' }} />
-                          )}
-                        </CardActionArea>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                <>
+                  <GalleryPhotoViewerModal
+                    open={photoViewerOpen}
+                    onClose={() => setPhotoViewerOpen(false)}
+                    photos={photos}
+                    index={photoViewerIndex}
+                    onIndexChange={setPhotoViewerIndex}
+                    currentUserId={user?.id}
+                    onCommentsCountChange={(photoId, commentsCount) => {
+                      setPhotos((prev) =>
+                        prev.map((p) => (p.id === photoId ? { ...p, comments_count: commentsCount } : p)),
+                      );
+                    }}
+                  />
+                  <Grid container spacing={1.5}>
+                    {photos.map((ph, photoIndex) => (
+                      <Grid key={ph.id} size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Card variant="outlined" sx={{ overflow: 'hidden' }}>
+                          <CardActionArea
+                            onClick={() => {
+                              setPhotoViewerIndex(photoIndex);
+                              setPhotoViewerOpen(true);
+                            }}
+                            aria-label="Открыть фото"
+                          >
+                            {resolveRailsBlobUrl(ph.image_url) ? (
+                              <CardMedia
+                                component="img"
+                                height="140"
+                                image={resolveRailsBlobUrl(ph.image_url)}
+                                alt="Фото"
+                                sx={{ objectFit: 'cover', display: 'block' }}
+                              />
+                            ) : (
+                              <Box sx={{ height: 140, bgcolor: 'action.hover' }} />
+                            )}
+                          </CardActionArea>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </>
               )}
             </Box>
           </Stack>
