@@ -1,14 +1,20 @@
 import type { FamilyChartData } from '../familyChartApi';
 import type { PersonDetail } from '../api/personApi';
 
+/** Ссылка на `/tree` с корнем в узле древа (`?main` = id узла family-chart). */
+export function buildFamilyTreeMainHref(chartNodeId: string): string {
+  const q = new URLSearchParams();
+  q.set('main', chartNodeId);
+  return `/tree?${q.toString()}`;
+}
+
 /** Ссылка на `/tree` с параметром, чтобы древо открылось от этой персоны (`updateMainId`). */
 export function buildFamilyTreeHref(person: Pick<PersonDetail, 'id' | 'chart_id'>): string {
-  const q = new URLSearchParams();
   if (person.chart_id) {
-    q.set('main', person.chart_id);
-  } else {
-    q.set('person', String(person.id));
+    return buildFamilyTreeMainHref(person.chart_id);
   }
+  const q = new URLSearchParams();
+  q.set('person', String(person.id));
   return `/tree?${q.toString()}`;
 }
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Alert from '@mui/material/Alert';
 import Container from '@mui/material/Container';
@@ -19,7 +19,7 @@ export function FamilyChartPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const treeReadOnly = !canEditGenealogy(user?.role);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const mainParam = searchParams.get('main');
   const personParam = searchParams.get('person');
   const [treeData, setTreeData] = useState<FamilyChartData | null>(null);
@@ -27,18 +27,35 @@ export function FamilyChartPage() {
   const [loading, setLoading] = useState(true);
   const [chartGeneration, setChartGeneration] = useState(0);
   const [eventLog, setEventLog] = useState<string[]>([]);
+  const pendingMainFromAddRef = useRef<string | null>(null);
 
   const appendLog = useCallback((line: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString()} — ${line}`, ...prev].slice(0, 40));
   }, []);
 
   const handlePersistedData = useCallback(
-    (next: FamilyChartData) => {
+    (next: FamilyChartData, meta: { addedChartNodeIds: string[]; focusMainNodeId: string | null }) => {
+      const focusId =
+        meta.focusMainNodeId ??
+        pendingMainFromAddRef.current ??
+        (meta.addedChartNodeIds.length > 0
+          ? meta.addedChartNodeIds[meta.addedChartNodeIds.length - 1]
+          : null);
+      pendingMainFromAddRef.current = null;
+
+      if (focusId && next.some((n) => n.id === focusId)) {
+        setSearchParams({ main: focusId }, { replace: true });
+      }
+
       setTreeData(next);
       setChartGeneration((g) => g + 1);
-      appendLog(`Сохранено (${next.length} человек синхронизировано с сервером)`);
+      appendLog(
+        focusId
+          ? `Сохранено (${next.length} человек), корень древа: ${focusId}`
+          : `Сохранено (${next.length} человек синхронизировано с сервером)`,
+      );
     },
-    [appendLog],
+    [appendLog, setSearchParams],
   );
 
   useEffect(() => {
@@ -115,9 +132,12 @@ export function FamilyChartPage() {
             onDataChange={setTreeData}
             onPersistedData={handlePersistedData}
             onUpdate={(data) => appendLog(`Изменения (${data.length} человек в древе)`)}
-            onAdd={(data, ids) =>
-              appendLog(`Добавлены [${ids.join(', ')}] → всего ${data.length} человек`)
-            }
+            onAdd={(data, ids) => {
+              if (ids.length > 0) {
+                pendingMainFromAddRef.current = ids[ids.length - 1];
+              }
+              appendLog(`Добавлены [${ids.join(', ')}] → всего ${data.length} человек`);
+            }}
             onRemove={(data, ids) =>
               appendLog(`Удалены [${ids.join(', ')}] → всего ${data.length} человек`)
             }

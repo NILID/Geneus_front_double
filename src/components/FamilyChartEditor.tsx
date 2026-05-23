@@ -31,8 +31,14 @@ export type FamilyChartEditorProps = {
   /** Current tree; updates from the chart are sent via `onDataChange`. */
   data: FamilyChartData | null;
   onDataChange: (next: FamilyChartData) => void;
-  /** Called after the server returns canonical nodes so the parent can remount if ids changed. */
-  onPersistedData?: (next: FamilyChartData) => void;
+  /**
+   * После успешного сохранения на сервер.
+   * `focusMainNodeId` — узел, вокруг которого нужно построить древо (из формы family-chart при добавлении).
+   */
+  onPersistedData?: (
+    next: FamilyChartData,
+    meta: { addedChartNodeIds: string[]; focusMainNodeId: string | null },
+  ) => void;
   cardDisplay?: CardDisplayConfig;
   /** Поля формы: строки = id и label; или `{ id, label, type }` при русских подписях. */
   editFields?: Array<string | { type: string; id: string; label: string }>;
@@ -57,6 +63,40 @@ const DEFAULT_CARD_DISPLAY: CardDisplayConfig = [
   (d) => formatFamilyChartYearLine(d.data as Record<string, unknown>),
 ];
 const DEFAULT_EDIT_FIELDS = RUSSIAN_EDIT_FIELDS;
+
+type ChartFormDatum = {
+  id?: string;
+  to_add?: unknown;
+  unknown?: unknown;
+};
+
+/** editTree из family-chart: при добавлении родственника хранит новую персону в addRelativeInstance. */
+type EditTreeWithAddRelative = {
+  isAddingRelative: () => boolean;
+  addRelativeInstance: { datum: ChartFormDatum | null };
+};
+
+function resolveFocusMainNodeIdOnSubmit(
+  datum: ChartFormDatum,
+  editTree: EditTreeWithAddRelative,
+  lastPersisted: FamilyChartData | null,
+): string | null {
+  if (editTree.isAddingRelative()) {
+    const active = editTree.addRelativeInstance.datum;
+    if (active?.id != null && active.id !== '') {
+      return String(active.id);
+    }
+  }
+  if (datum.id == null || datum.id === '') {
+    return null;
+  }
+  const nodeId = String(datum.id);
+  const wasPersisted = lastPersisted?.some((n) => n.id === nodeId) ?? false;
+  if (!wasPersisted || datum.to_add || datum.unknown) {
+    return nodeId;
+  }
+  return null;
+}
 
 function newExternalChartNodeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -194,6 +234,9 @@ export function FamilyChartEditor({
   const appliedMainNodeIdRef = useRef<string | null>(null);
   const editTreeRef = useRef<{ exportData: () => unknown; destroy: () => unknown } | null>(null);
   const lastExportRef = useRef<FamilyChartData | null>(null);
+  /** Последний снимок, совпадающий с сервером; не обновляется при локальных правках до save. */
+  const lastPersistedDataRef = useRef<FamilyChartData | null>(null);
+  const focusMainNodeIdRef = useRef<string | null>(null);
   const removedIdsRef = useRef<Set<string>>(new Set());
   /** True when the next `data` prop update came from our own `onDataChange`, not from the parent. */
   const internalChangeRef = useRef(false);
@@ -224,16 +267,23 @@ export function FamilyChartEditor({
 
     try {
       const nodes = tree.exportData() as FamilyChartData;
+      const prevPersisted = lastPersistedDataRef.current;
       const savedNodes = await saveFamilyTree({
         nodes,
         removed_ids: Array.from(removedIdsRef.current),
       });
 
+      const { added: addedChartNodeIds } = diffPersonIds(prevPersisted, savedNodes);
+      const focusMainNodeId =
+        focusMainNodeIdRef.current ??
+        (addedChartNodeIds.length > 0 ? addedChartNodeIds[addedChartNodeIds.length - 1] : null);
+      focusMainNodeIdRef.current = null;
       removedIdsRef.current = new Set();
       lastExportRef.current = savedNodes;
+      lastPersistedDataRef.current = savedNodes;
       internalChangeRef.current = true;
       callbacksRef.current.onDataChange(savedNodes);
-      callbacksRef.current.onPersistedData?.(savedNodes);
+      callbacksRef.current.onPersistedData?.(savedNodes, { addedChartNodeIds, focusMainNodeId });
       console.log('Древо семьи сохранено из формы редактирования.');
     } catch (error) {
       console.error('Не удалось сохранить древо семьи:', error);
@@ -249,14 +299,20 @@ export function FamilyChartEditor({
 
   const handleFirstPersonCreated = useCallback((saved: FamilyChartData) => {
     removedIdsRef.current = new Set();
+    const prevPersisted = lastPersistedDataRef.current;
+    const { added: addedChartNodeIds } = diffPersonIds(prevPersisted, saved);
+    const focusMainNodeId =
+      focusMainNodeIdRef.current ??
+      (addedChartNodeIds.length > 0 ? addedChartNodeIds[0] : saved[0]?.id ?? null);
+    focusMainNodeIdRef.current = null;
     lastExportRef.current = saved;
+    lastPersistedDataRef.current = saved;
     internalChangeRef.current = true;
-    const { added } = diffPersonIds(null, saved);
     callbacksRef.current.onDataChange(saved);
-    callbacksRef.current.onPersistedData?.(saved);
+    callbacksRef.current.onPersistedData?.(saved, { addedChartNodeIds, focusMainNodeId });
     callbacksRef.current.onUpdate?.(saved);
-    if (added.length) {
-      callbacksRef.current.onAdd?.(saved, added);
+    if (addedChartNodeIds.length) {
+      callbacksRef.current.onAdd?.(saved, addedChartNodeIds);
     }
     console.log('Первая персона в древе создана и сохранена на сервере.');
   }, []);
@@ -337,7 +393,12 @@ export function FamilyChartEditor({
           }
         )
         .setFields(editFields)
-        .setPostSubmit(() => {
+        .setPostSubmit((datum: ChartFormDatum) => {
+          focusMainNodeIdRef.current = resolveFocusMainNodeIdOnSubmit(
+            datum,
+            editTree as unknown as EditTreeWithAddRelative,
+            lastPersistedDataRef.current,
+          );
           void persistLatestTree();
         })
         .setOnChange(() => {
@@ -368,6 +429,7 @@ export function FamilyChartEditor({
     chartRef.current = chart;
     createdForKeyRef.current = remountKey;
     lastExportRef.current = data;
+    lastPersistedDataRef.current = data;
 
     const stopRussianUi = observeRussianFamilyChartUi(el);
 
@@ -384,6 +446,7 @@ export function FamilyChartEditor({
       chartRef.current = undefined;
       editTreeRef.current = null;
       lastExportRef.current = null;
+      lastPersistedDataRef.current = null;
       removedIdsRef.current = new Set();
       pendingSaveRef.current = false;
       createdForKeyRef.current = null;
@@ -416,6 +479,7 @@ export function FamilyChartEditor({
     chartRef.current.updateTree({ tree_position: 'inherit' });
 
     lastExportRef.current = data;
+    lastPersistedDataRef.current = data;
   }, [data]);
 
   if (!data) {
