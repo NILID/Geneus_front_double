@@ -12,19 +12,13 @@ import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { alpha } from '@mui/material/styles';
-import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
-import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
-import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import { resolveRailsBlobUrl } from '../api/assetUrls';
 import { createInvitationLinkRequest, sendInvitationRequest } from '../auth/authApi';
 import { useAuth } from '../auth/AuthContext';
@@ -80,27 +74,6 @@ function formatRuDateTime(iso: string): string {
   } catch {
     return '';
   }
-}
-
-function NavTileIcon({ children }: { children: React.ReactNode }) {
-  return (
-    <Box
-      aria-hidden
-      sx={(theme) => ({
-        width: 40,
-        height: 40,
-        borderRadius: 1,
-        bgcolor: alpha(theme.palette.primary.main, 0.2),
-        display: 'grid',
-        placeItems: 'center',
-        color: 'primary.main',
-        flexShrink: 0,
-        '& .MuiSvgIcon-root': { fontSize: 22 },
-      })}
-    >
-      {children}
-    </Box>
-  );
 }
 
 export function HomePage() {
@@ -483,134 +456,6 @@ export function HomePage() {
             {error}
           </Alert>
         )}
-
-        <Stack spacing={0.5} sx={{ mb: 3 }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-            Сейчас в проекте
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Недавние обновления и быстрые ссылки
-          </Typography>
-        </Stack>
-
-        <Grid container spacing={1.5} sx={{ mb: 4 }}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Paper
-              component={RouterLink}
-              to="/tree"
-              sx={{
-                p: 2,
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'block',
-                height: '100%',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileIcon>
-                  <AccountTreeIcon />
-                </NavTileIcon>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    Древо
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    изучай своих родных
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Paper
-              component={RouterLink}
-              to="/media"
-              sx={{
-                p: 2,
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'block',
-                height: '100%',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileIcon>
-                  <PhotoLibraryOutlinedIcon />
-                </NavTileIcon>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    Медиа
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    галерея фотографий
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Paper
-              component={RouterLink}
-              to="/map"
-              sx={{
-                p: 2,
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'block',
-                height: '100%',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileIcon>
-                  <MapOutlinedIcon />
-                </NavTileIcon>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    Карта
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    значимые места
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <Paper
-              component={RouterLink}
-              to="/ideas"
-              sx={{
-                p: 2,
-                textDecoration: 'none',
-                color: 'inherit',
-                display: 'block',
-                height: '100%',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 },
-              }}
-            >
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <NavTileIcon>
-                  <EditNoteOutlinedIcon />
-                </NavTileIcon>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    Идеи
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    заметки и обсуждения
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-        </Grid>
 
         {loading ? (
           <Typography color="text.secondary">Загрузка…</Typography>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -13,20 +14,24 @@ import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { AccountSettingsForm } from './AccountSettingsForm';
+import { NavSectionIcon } from './NavSectionIcon';
 import { useAuth } from '../auth/AuthContext';
 import { canAccessAudit, canManageUsers } from '../auth/roles';
+import { ADMIN_MENU_ICON, MAIN_NAV_SECTIONS } from '../navigation/mainNavSections';
 
-type NavItem = {
+type AdminNavItem = {
   to: string;
   label: string;
-  active: boolean;
 };
 
 export function MainAppBar() {
@@ -37,30 +42,44 @@ export function MainAppBar() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [accountOpen, setAccountOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [adminMenuAnchor, setAdminMenuAnchor] = useState<null | HTMLElement>(null);
 
-  const navItems = useMemo((): NavItem[] => {
-    const items: NavItem[] = [
-      { to: '/tree', label: 'Древо', active: pathname === '/tree' },
-      { to: '/media', label: 'Медиа', active: pathname === '/media' },
-      { to: '/map', label: 'Карта', active: pathname === '/map' },
-      { to: '/ideas', label: 'Идеи', active: pathname === '/ideas' },
-    ];
+  const mainNavItems = useMemo(
+    () =>
+      MAIN_NAV_SECTIONS.map((section) => ({
+        ...section,
+        active: pathname === section.to,
+      })),
+    [pathname],
+  );
+
+  const adminNavItems = useMemo((): AdminNavItem[] => {
+    const items: AdminNavItem[] = [];
     if (canManageUsers(user?.role)) {
-      items.push({
-        to: '/admin/users',
-        label: 'Пользователи',
-        active: pathname === '/admin/users',
-      });
+      items.push({ to: '/admin/users', label: 'Пользователи' });
     }
     if (canAccessAudit(user?.role)) {
-      items.push({ to: '/audit', label: 'Аудит', active: pathname === '/audit' });
+      items.push({ to: '/audit', label: 'Аудит' });
     }
     return items;
-  }, [pathname, user?.role]);
+  }, [user?.role]);
+
+  const showAdminMenu = adminNavItems.length > 0;
+  const adminMenuActive = adminNavItems.some((item) => pathname === item.to);
+  const adminMenuOpen = Boolean(adminMenuAnchor);
 
   useEffect(() => {
     setMobileNavOpen(false);
+    setAdminMenuAnchor(null);
   }, [pathname]);
+
+  function openAdminMenu(event: React.MouseEvent<HTMLElement>) {
+    setAdminMenuAnchor(event.currentTarget);
+  }
+
+  function closeAdminMenu() {
+    setAdminMenuAnchor(null);
+  }
 
   async function handleLogout() {
     await logout();
@@ -103,21 +122,53 @@ export function MainAppBar() {
         </Typography>
         {isDesktop ? (
           <Stack direction="row" spacing={0.5} useFlexGap sx={{ alignItems: 'center' }}>
-            {navItems.map((item) => (
+            {mainNavItems.map((item) => {
+              const Icon = item.Icon;
+              return (
+                <Button
+                  key={item.to}
+                  component={RouterLink}
+                  to={item.to}
+                  color="inherit"
+                  size="small"
+                  sx={{
+                    px: 1,
+                    fontWeight: item.active ? 600 : 400,
+                    ...(item.active && { bgcolor: 'action.selected' }),
+                  }}
+                >
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <NavSectionIcon>
+                      <Icon />
+                    </NavSectionIcon>
+                    {item.label}
+                  </Stack>
+                </Button>
+              );
+            })}
+            {showAdminMenu ? (
               <Button
-                key={item.to}
-                component={RouterLink}
-                to={item.to}
                 color="inherit"
                 size="small"
+                onClick={openAdminMenu}
+                aria-haspopup="true"
+                aria-expanded={adminMenuOpen ? 'true' : undefined}
+                aria-controls={adminMenuOpen ? 'admin-nav-menu' : undefined}
                 sx={{
-                  fontWeight: item.active ? 600 : 400,
-                  ...(item.active && { bgcolor: 'action.selected' }),
+                  px: 1,
+                  fontWeight: adminMenuActive ? 600 : 400,
+                  ...(adminMenuActive && { bgcolor: 'action.selected' }),
                 }}
               >
-                {item.label}
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                  <NavSectionIcon>
+                    <ADMIN_MENU_ICON />
+                  </NavSectionIcon>
+                  Админ
+                  <ArrowDropDownIcon sx={{ fontSize: 20, opacity: 0.7 }} />
+                </Stack>
               </Button>
-            ))}
+            ) : null}
           </Stack>
         ) : null}
         <Box sx={{ flexGrow: 1 }} />
@@ -198,17 +249,41 @@ export function MainAppBar() {
       >
         <Box sx={{ width: 280, pt: 1 }} role="navigation" aria-label="Главное меню">
           <List disablePadding>
-            {navItems.map((item) => (
+            {mainNavItems.map((item) => {
+              const Icon = item.Icon;
+              return (
+                <ListItemButton
+                  key={item.to}
+                  component={RouterLink}
+                  to={item.to}
+                  selected={item.active}
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <NavSectionIcon>
+                      <Icon />
+                    </NavSectionIcon>
+                  </ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              );
+            })}
+            {showAdminMenu ? (
               <ListItemButton
-                key={item.to}
-                component={RouterLink}
-                to={item.to}
-                selected={item.active}
-                onClick={() => setMobileNavOpen(false)}
+                selected={adminMenuActive}
+                onClick={openAdminMenu}
+                aria-haspopup="true"
+                aria-expanded={adminMenuOpen ? 'true' : undefined}
               >
-                <ListItemText primary={item.label} />
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <NavSectionIcon>
+                    <ADMIN_MENU_ICON />
+                  </NavSectionIcon>
+                </ListItemIcon>
+                <ListItemText primary="Админ" />
+                <ArrowDropDownIcon fontSize="small" color="action" />
               </ListItemButton>
-            ))}
+            ) : null}
           </List>
           {email ? (
             <>
@@ -232,6 +307,32 @@ export function MainAppBar() {
           </Box>
         </Box>
       </Drawer>
+
+      {showAdminMenu ? (
+        <Menu
+          id="admin-nav-menu"
+          anchorEl={adminMenuAnchor}
+          open={adminMenuOpen}
+          onClose={closeAdminMenu}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        >
+          {adminNavItems.map((item) => (
+            <MenuItem
+              key={item.to}
+              component={RouterLink}
+              to={item.to}
+              selected={pathname === item.to}
+              onClick={() => {
+                closeAdminMenu();
+                setMobileNavOpen(false);
+              }}
+            >
+              {item.label}
+            </MenuItem>
+          ))}
+        </Menu>
+      ) : null}
     </AppBar>
   );
 }
