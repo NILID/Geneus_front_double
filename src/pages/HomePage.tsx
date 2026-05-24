@@ -7,7 +7,6 @@ import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
 import CardMedia from '@mui/material/CardMedia';
-import Chip from '@mui/material/Chip';
 import Container from '@mui/material/Container';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -38,8 +37,10 @@ import {
   type PersonBirthdayRow,
   type PersonHomeRow,
 } from '../api/personApi';
+import { fetchHomeStats, type HomeStats } from '../api/homeApi';
 import { GalleryPhotoViewerModal } from '../components/GalleryPhotoViewerModal';
 import { HomeBirthdaysBlock } from '../components/HomeBirthdaysBlock';
+import { HomeStatsCard } from '../components/HomeStatsCard';
 
 const HOME_PEOPLE_LIMIT = 6;
 const HOME_PHOTO_LIMIT = 8;
@@ -108,6 +109,7 @@ export function HomePage() {
   const [people, setPeople] = useState<PersonHomeRow[]>([]);
   const [birthdays, setBirthdays] = useState<PersonBirthdayRow[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
+  const [homeStats, setHomeStats] = useState<HomeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,14 +136,16 @@ export function HomePage() {
     setError(null);
     setLoading(true);
     try {
-      const [ppl, ph, bdays] = await Promise.all([
+      const [ppl, ph, bdays, stats] = await Promise.all([
         fetchRecentPeople(),
         fetchGalleryPhotos(),
         fetchUpcomingBirthdays(),
+        fetchHomeStats(),
       ]);
       setPeople(ppl.slice(0, HOME_PEOPLE_LIMIT));
       setBirthdays(bdays);
       setPhotos(ph.slice(0, HOME_PHOTO_LIMIT));
+      setHomeStats(stats);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить главную');
     } finally {
@@ -245,70 +249,72 @@ export function HomePage() {
           }}
         />
         <Container maxWidth="lg" sx={{ position: 'relative', py: { xs: 4, sm: 6 } }}>
-          <Stack
-            spacing={2.5}
-            sx={{ maxWidth: 640, alignItems: { xs: 'stretch', sm: 'flex-start' } }}
-          >
-            <Chip
-              label="Семейная хроника"
-              size="small"
+          <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
+            <Grid size={{ xs: 12, md: 7 }} sx={{ minWidth: 0 }}>
+              <Stack
+                spacing={2.5}
+                sx={{ maxWidth: 640, alignItems: { xs: 'stretch', sm: 'flex-start' } }}
+              >
+                <Typography
+                  variant="h3"
+                  component="h1"
+                  sx={{
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    fontSize: { xs: '1.85rem', sm: '2.25rem' },
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Добро пожаловать
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 560 }}>
+                  Здесь собраны персоны, фотографии и заметки семьи. Откройте интерактивное древо связей
+                  или загляните в медиа и на карту мест.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ pt: 1 }}>
+                  <Button
+                    component={RouterLink}
+                    to="/tree"
+                    variant="contained"
+                    size="large"
+                    sx={{ px: 2.5 }}
+                  >
+                    Открыть древо
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/media"
+                    variant="outlined"
+                    size="large"
+                    color="inherit"
+                  >
+                    Медиа
+                  </Button>
+                  {showInvite ? (
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      size="large"
+                      color="inherit"
+                      onClick={openInviteDialog}
+                    >
+                      Пригласить
+                    </Button>
+                  ) : null}
+                </Stack>
+              </Stack>
+            </Grid>
+            <Grid
+              size={{ xs: 12, md: 5 }}
               sx={{
-                alignSelf: { xs: 'center', sm: 'flex-start' },
-                bgcolor: 'rgba(144, 202, 249, 0.12)',
-                color: 'primary.light',
-                borderColor: 'rgba(144, 202, 249, 0.35)',
-                borderWidth: 1,
-                borderStyle: 'solid',
-              }}
-            />
-            <Typography
-              variant="h3"
-              component="h1"
-              sx={{
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                fontSize: { xs: '1.85rem', sm: '2.25rem' },
-                lineHeight: 1.2,
+                display: 'flex',
+                justifyContent: { xs: 'center', md: 'flex-end' },
+                alignItems: { md: 'center' },
               }}
             >
-              Добро пожаловать
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 560 }}>
-              Здесь собраны персоны, фотографии и заметки семьи. Откройте интерактивное древо связей или
-              загляните в медиа и на карту мест.
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ pt: 1 }}>
-              <Button
-                component={RouterLink}
-                to="/tree"
-                variant="contained"
-                size="large"
-                sx={{ px: 2.5 }}
-              >
-                Открыть древо
-              </Button>
-              <Button
-                component={RouterLink}
-                to="/media"
-                variant="outlined"
-                size="large"
-                color="inherit"
-              >
-                Медиа
-              </Button>
-              {showInvite ? (
-                <Button
-                  type="button"
-                  variant="outlined"
-                  size="large"
-                  color="inherit"
-                  onClick={openInviteDialog}
-                >
-                  Пригласить
-                </Button>
-              ) : null}
-            </Stack>
-          </Stack>
+              <HomeStatsCard stats={homeStats} loading={loading} />
+            </Grid>
+          </Grid>
         </Container>
       </Box>
 
