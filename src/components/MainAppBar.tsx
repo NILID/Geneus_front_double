@@ -106,20 +106,30 @@ export function MainAppBar() {
       }}
     >
       <Toolbar variant="dense" sx={{ gap: 1, py: 1, flexWrap: 'nowrap' }}>
-        <Typography
-          variant="h6"
+        <Box
           component={RouterLink}
           to="/"
+          aria-label="Родословная — на главную"
           sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 1,
             color: 'inherit',
             textDecoration: 'none',
-            fontWeight: 700,
             mr: { xs: 0, sm: 1 },
             flexShrink: 0,
           }}
         >
-          Родословная
-        </Typography>
+          <Box
+            component="img"
+            src={`${process.env.PUBLIC_URL}/logo192.png`}
+            alt=""
+            sx={{ width: 32, height: 32, display: 'block' }}
+          />
+          <Typography variant="h6" component="span" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+            Родословная
+          </Typography>
+        </Box>
         {isDesktop ? (
           <Stack direction="row" spacing={0.5} useFlexGap sx={{ alignItems: 'center' }}>
             {mainNavItems.map((item) => {
