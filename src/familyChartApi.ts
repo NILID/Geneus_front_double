@@ -118,53 +118,87 @@ export function normalizeFamilyChartPayload(json: unknown): FamilyChartData {
   return rewriteFamilyChartAvatarUrls(data);
 }
 
-/** Варианты для выбора персон при отметке на фото (id — ключ в БД для API персон). */
+/** Варианты для выбора персон (id — ключ в БД для API персон). */
 export interface ChartPersonOption {
   id: number;
   label: string;
+  /** Только ФИО для поиска в autocomplete (без годов и скобок). */
+  searchText: string;
 }
 
-export function chartPeopleAsTagOptions(chart: FamilyChartData): ChartPersonOption[] {
+function chartNodePersonId(node: FamilyChartPerson): number | null {
+  const numericFromId =
+    typeof node.id === 'string' && /^\d+$/.test(node.id) ? Number(node.id) : NaN;
+  const rawId = node.person_id ?? (Number.isFinite(numericFromId) ? numericFromId : NaN);
+  if (!Number.isFinite(rawId) || rawId < 1) {
+    return null;
+  }
+  return rawId;
+}
+
+function chartNodeNameParts(node: FamilyChartPerson): { first: string; last: string } {
+  const d = node.data as Record<string, unknown> | undefined;
+  const first = typeof d?.['first name'] === 'string' ? d['first name'].trim() : '';
+  const last = typeof d?.['last name'] === 'string' ? d['last name'].trim() : '';
+  return { first, last };
+}
+
+/** Строка для фильтрации по вводу: варианты порядка имени и фамилии. */
+export function chartPersonSearchText(first: string, last: string, id: number): string {
+  const parts: string[] = [];
+  const push = (s: string) => {
+    const t = s.trim();
+    if (t) {
+      parts.push(t);
+    }
+  };
+  push(last);
+  push(first);
+  push(`${last} ${first}`);
+  push(`${first} ${last}`);
+  const unique = Array.from(new Set(parts));
+  return unique.length > 0 ? unique.join(' ') : `id ${id}`;
+}
+
+function collectChartPersonOptions(
+  chart: FamilyChartData,
+  buildLabel: (first: string, last: string, id: number, data: Record<string, unknown>) => string,
+): ChartPersonOption[] {
   const byId = new Map<number, ChartPersonOption>();
   for (const node of chart) {
-    const numericFromId =
-      typeof node.id === 'string' && /^\d+$/.test(node.id) ? Number(node.id) : NaN;
-    const rawId = node.person_id ?? (Number.isFinite(numericFromId) ? numericFromId : NaN);
-    if (!Number.isFinite(rawId) || rawId < 1) {
+    const rawId = chartNodePersonId(node);
+    if (rawId == null) {
       continue;
     }
-    const first =
-      typeof node.data?.['first name'] === 'string' ? node.data['first name'].trim() : '';
-    const last =
-      typeof node.data?.['last name'] === 'string' ? node.data['last name'].trim() : '';
-    const label = [first, last].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
-    byId.set(rawId, { id: rawId, label });
+    const { first, last } = chartNodeNameParts(node);
+    const d = (node.data ?? {}) as Record<string, unknown>;
+    const label = buildLabel(first, last, rawId, d);
+    byId.set(rawId, {
+      id: rawId,
+      label,
+      searchText: chartPersonSearchText(first, last, rawId),
+    });
   }
   return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+}
+
+/** Короткая подпись «имя фамилия» для списков. */
+export function chartPeopleAsTagOptions(chart: FamilyChartData): ChartPersonOption[] {
+  return collectChartPersonOptions(chart, (first, last, rawId) => {
+    return [first, last].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
+  });
 }
 
 /**
- * Подписи для привязки учётки к персоне: фамилия, имя и строка лет как на карточках древа
+ * Подписи для выбора персоны: фамилия, имя и строка лет как на карточках древа
  * ({@link formatFamilyChartYearLine}).
  */
 export function chartPersonLinkSelectOptions(chart: FamilyChartData): ChartPersonOption[] {
-  const byId = new Map<number, ChartPersonOption>();
-  for (const node of chart) {
-    const numericFromId =
-      typeof node.id === 'string' && /^\d+$/.test(node.id) ? Number(node.id) : NaN;
-    const rawId = node.person_id ?? (Number.isFinite(numericFromId) ? numericFromId : NaN);
-    if (!Number.isFinite(rawId) || rawId < 1) {
-      continue;
-    }
-    const d = node.data as Record<string, unknown>;
-    const first = typeof d['first name'] === 'string' ? d['first name'].trim() : '';
-    const last = typeof d['last name'] === 'string' ? d['last name'].trim() : '';
+  return collectChartPersonOptions(chart, (first, last, rawId, d) => {
     const yearLine = formatFamilyChartYearLine(d);
     const name = [last, first].filter(Boolean).join(' ').trim() || `ID ${rawId}`;
-    const label = yearLine ? `${name} (${yearLine})` : name;
-    byId.set(rawId, { id: rawId, label });
-  }
-  return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+    return yearLine ? `${name} (${yearLine})` : name;
+  });
 }
 
 function authorizedInit(init: RequestInit = {}): RequestInit {

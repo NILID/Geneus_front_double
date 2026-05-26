@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -7,7 +6,6 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
@@ -19,6 +17,7 @@ import { personDisplayName } from '../api/personApi';
 import type { ChartPersonOption } from '../familyChartApi';
 import type { GalleryTaggedPerson } from '../api/galleryPhotoApi';
 
+import { ChartPersonAutocomplete } from './ChartPersonAutocomplete';
 import { GalleryPhotoRegionOverlay } from './GalleryPhotoRegionOverlay';
 
 function taggedToInputs(tagged: GalleryTaggedPerson[]): GalleryPersonTagInput[] {
@@ -284,19 +283,27 @@ export function GalleryPhotoPersonTagEditor({
       {photoPanel}
       {sidebar}
 
-      <Dialog open={pickPersonOpen} onClose={() => setPickPersonOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={pickPersonOpen}
+        onClose={() => setPickPersonOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        disableRestoreFocus
+      >
         <DialogTitle>Кто на выделенной области?</DialogTitle>
         <DialogContent>
-          <Autocomplete
-            options={chartPeople}
-            getOptionLabel={(o) => o.label}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            value={selectedPerson}
-            onChange={(_, v) => setSelectedPerson(v)}
-            renderInput={(params) => (
-              <TextField {...params} label="Персона" autoFocus sx={{ mt: 1 }} />
-            )}
-          />
+          {pickPersonOpen ? (
+            <Box sx={{ mt: 1 }}>
+              <ChartPersonAutocomplete
+                instanceKey={pendingRegion ? JSON.stringify(pendingRegion) : 'pick'}
+                options={chartPeople}
+                value={selectedPerson}
+                onChange={setSelectedPerson}
+                excludeIds={tags.map((t) => t.person_id)}
+                autoFocus
+              />
+            </Box>
+          ) : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPickPersonOpen(false)}>Отмена</Button>

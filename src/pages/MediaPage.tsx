@@ -28,7 +28,7 @@ import { canEditGenealogy } from '../auth/roles';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
 import { GalleryPhotoTagPeopleDialog } from '../components/GalleryPhotoTagPeopleDialog';
 import { SessionLoading } from '../components/SessionLoading';
-import { chartPeopleAsTagOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
+import { chartPersonLinkSelectOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
 import type { GalleryPersonTagInput } from '../gallery/galleryPhotoRegion';
 
 type YearFilterValue = 'all' | 'none' | number;
@@ -108,7 +108,7 @@ export function MediaPage() {
     fetchFamilyChart()
       .then((chart) => {
         if (!cancelled) {
-          setChartPeople(chartPeopleAsTagOptions(chart));
+          setChartPeople(chartPersonLinkSelectOptions(chart));
         }
       })
       .catch(() => {
