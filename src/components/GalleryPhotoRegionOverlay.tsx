@@ -37,6 +37,30 @@ interface GalleryPhotoRegionOverlayProps {
   maxWidth?: string | number | Record<string, string | number>;
 }
 
+/** Активная подсветка персоны на фото (VK #0077FF) */
+const REGION_ACTIVE_COLOR = '#0077FF';
+const REGION_ACTIVE_FILL = 'rgba(0, 119, 255, 0.14)';
+const REGION_ACTIVE_GLOW = '0 0 0 1px rgba(0, 119, 255, 0.22)';
+
+function regionHighlightBoxSx(h: { active?: boolean; dimmed?: boolean }) {
+  if (h.active) {
+    return {
+      borderStyle: 'solid' as const,
+      borderWidth: 2,
+      borderColor: REGION_ACTIVE_COLOR,
+      bgcolor: REGION_ACTIVE_FILL,
+      boxShadow: REGION_ACTIVE_GLOW,
+    };
+  }
+  return {
+    borderStyle: (h.dimmed ? 'dashed' : 'solid') as 'dashed' | 'solid',
+    borderWidth: 1,
+    borderColor: h.dimmed ? 'grey.400' : 'primary.light',
+    bgcolor: h.dimmed ? 'rgba(0, 0, 0, 0.04)' : 'rgba(25, 118, 210, 0.12)',
+    boxShadow: 'none',
+  };
+}
+
 const HANDLE_CURSORS: Record<RegionEditHandle, string> = {
   move: 'move',
   nw: 'nw-resize',
@@ -79,7 +103,7 @@ function ResizeHandle({
         marginLeft: '-5px',
         marginTop: '-5px',
         borderRadius: '50%',
-        bgcolor: 'warning.main',
+        bgcolor: REGION_ACTIVE_COLOR,
         border: '2px solid',
         borderColor: 'common.white',
         boxShadow: 1,
@@ -111,21 +135,13 @@ function EditableRegionBox({
         position: 'absolute',
         ...pct,
         boxSizing: 'border-box',
-        borderStyle: highlight.dimmed ? 'dashed' : 'solid',
-        borderWidth: highlight.active ? 3 : 1,
-        borderColor: highlight.active ? 'warning.main' : highlight.dimmed ? 'grey.400' : 'primary.light',
-        bgcolor: highlight.active
-          ? 'rgba(255, 193, 7, 0.5)'
-          : highlight.dimmed
-            ? 'rgba(0, 0, 0, 0.04)'
-            : 'rgba(25, 118, 210, 0.12)',
+        ...regionHighlightBoxSx(highlight),
         borderRadius: 0.5,
         opacity: highlight.dimmed ? 0.45 : 1,
         zIndex: highlight.active ? 3 : 1,
         transition: highlight.active
           ? 'none'
           : 'background-color 0.15s, border-color 0.15s, opacity 0.15s, border-width 0.15s',
-        boxShadow: highlight.active ? '0 0 0 2px rgba(255, 193, 7, 0.35)' : 'none',
         pointerEvents: editable ? 'auto' : 'none',
         cursor: editable ? (highlight.active ? 'move' : 'pointer') : 'default',
         touchAction: 'none',
@@ -495,20 +511,12 @@ export function GalleryPhotoRegionOverlay({
                       position: 'absolute',
                       ...pct,
                       boxSizing: 'border-box',
-                      borderStyle: h.dimmed ? 'dashed' : 'solid',
-                      borderWidth: h.active ? 3 : 1,
-                      borderColor: h.active ? 'warning.main' : h.dimmed ? 'grey.400' : 'primary.light',
-                      bgcolor: h.active
-                        ? 'rgba(255, 193, 7, 0.5)'
-                        : h.dimmed
-                          ? 'rgba(0, 0, 0, 0.04)'
-                          : 'rgba(25, 118, 210, 0.12)',
+                      ...regionHighlightBoxSx(h),
                       borderRadius: 0.5,
                       opacity: h.dimmed ? 0.45 : 1,
                       zIndex: h.active ? 2 : 1,
                       transition:
                         'background-color 0.15s, border-color 0.15s, opacity 0.15s, border-width 0.15s',
-                      boxShadow: h.active ? '0 0 0 2px rgba(255, 193, 7, 0.35)' : 'none',
                       pointerEvents: 'none',
                     }}
                   />
@@ -523,8 +531,8 @@ export function GalleryPhotoRegionOverlay({
                 width: draftRect.width,
                 height: draftRect.height,
                 border: '2px dashed',
-                borderColor: 'warning.main',
-                bgcolor: 'rgba(255, 193, 7, 0.25)',
+                borderColor: REGION_ACTIVE_COLOR,
+                bgcolor: 'rgba(0, 119, 255, 0.18)',
                 pointerEvents: 'none',
                 zIndex: 5,
               }}

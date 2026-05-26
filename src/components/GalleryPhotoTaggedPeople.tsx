@@ -69,7 +69,7 @@ export function GalleryPhotoTaggedPeopleLinks({
               underline="hover"
               sx={{
                 fontWeight: isHighlighted ? 700 : 400,
-                color: isHighlighted ? 'warning.main' : 'inherit',
+                color: isHighlighted ? '#0077FF' : 'inherit',
                 ...(touchTarget
                   ? {
                       py: 0.25,
