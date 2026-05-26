@@ -2,7 +2,18 @@
 
 ## What “v2” means here
 
-The URL path `/examples/v2/17-edit-tree` refers to **documentation example set v2**, not a separate npm package major. The current npm release is **0.9.x** (`family-chart@latest`). The editing API is **`Chart#editTree()`** returning **`EditTree`**, which matches the documented pattern: `setFields`, `setOnChange`, `setCardClickOpen`, then `chart.updateTree({ initial: true })`.
+The URL path `/examples/v2/17-edit-tree` refers to **documentation example set v2**, not a separate npm package major. The current npm release is **0.9.x** (`family-chart@latest`). The editing API is **`Chart#editTree()`** returning **`EditTree`**, which matches the documented pattern: `setFields`, `setOnChange`, then wire card clicks (see below), then `chart.updateTree({ initial: true })`.
+
+### Do not regress: mini-tree / branch icon clicks
+
+With **`setCardHtml()`**, a naive `editTree.setCardClickOpen(card)` also opens the edit form when the user clicks the **mini-tree** icon (relatives off-canvas) or **duplicate branch** toggle — only tree rebuild should happen (SVG examples avoid this via `stopPropagation`).
+
+**Required wiring in `FamilyChartEditor`:**
+
+1. `wireFamilyChartCardClickForEdit(editTree, card)` — never call `setCardClickOpen` from app code.
+2. `bindFamilyChartAuxiliaryClickIsolation(cardEl, …)` inside `setOnCardUpdate` — DOM backup.
+
+**CI guards:** `familyChartEdit/cardClick.test.ts`, `familyChartEdit/familyChartEditor.contract.test.ts`.
 
 ## Feasibility
 

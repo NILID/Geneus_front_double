@@ -14,6 +14,10 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { saveFamilyTree, type FamilyChartData, type FamilyChartPerson } from '../familyChartApi';
+import {
+  bindFamilyChartAuxiliaryClickIsolation,
+  wireFamilyChartCardClickForEdit,
+} from '../familyChartEdit/cardClick';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
 import { RUSSIAN_EDIT_FIELDS, observeRussianFamilyChartUi } from '../familyChartEdit/familyChartRussianUi';
 import { formatFamilyChartPersonNameLine, formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
@@ -378,6 +382,16 @@ export function FamilyChartEditor({
         onOpenPersonPageRef.current?.(personId);
       });
       cardEl.appendChild(a);
+
+      const rawNodeId = node.id;
+      if (rawNodeId !== undefined && rawNodeId !== null && rawNodeId !== '') {
+        bindFamilyChartAuxiliaryClickIsolation(cardEl, () => {
+          const chart = chartRef.current;
+          if (!chart) return;
+          chart.updateMainId(String(rawNodeId));
+          chart.updateTree({});
+        });
+      }
     });
 
     if (!readOnly) {
@@ -420,7 +434,10 @@ export function FamilyChartEditor({
             callbacksRef.current.onRemove?.(raw, removed);
           }
         })
-        .setCardClickOpen(card);
+      wireFamilyChartCardClickForEdit(
+        editTree,
+        card as unknown as Parameters<typeof wireFamilyChartCardClickForEdit>[1],
+      );
 
       editTreeRef.current = editTree;
     } else {
