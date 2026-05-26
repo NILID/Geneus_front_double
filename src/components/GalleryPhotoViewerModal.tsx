@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
 import Fade from '@mui/material/Fade';
 import IconButton from '@mui/material/IconButton';
 import Modal from '@mui/material/Modal';
@@ -17,6 +21,8 @@ import { GalleryPhotoCommentsPanel } from './GalleryPhotoCommentsPanel';
 import { GalleryPhotoRegionOverlay } from './GalleryPhotoRegionOverlay';
 import { GalleryPhotoTaggedPeopleLinks } from './GalleryPhotoTaggedPeople';
 
+type MobileSheet = 'info' | 'comments';
+
 function formatMetaDate(iso: string): string {
   try {
     return new Date(iso).toLocaleString('ru-RU', {
@@ -27,6 +33,17 @@ function formatMetaDate(iso: string): string {
     return iso;
   }
 }
+
+const mobileDrawerPaperSx = {
+  maxHeight: 'min(85dvh, 640px)',
+  bgcolor: 'grey.900',
+  color: 'grey.200',
+  borderTopLeftRadius: 12,
+  borderTopRightRadius: 12,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+} as const;
 
 export interface GalleryPhotoViewerModalProps {
   open: boolean;
@@ -51,6 +68,8 @@ export function GalleryPhotoViewerModal({
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
   const canHover = useMediaQuery('(hover: hover) and (pointer: fine)');
   const [hoveredPersonId, setHoveredPersonId] = useState<number | null>(null);
+  const [mobileSheet, setMobileSheet] = useState<MobileSheet | null>(null);
+  const [commentsCount, setCommentsCount] = useState(0);
 
   const safeLen = photos.length;
   const safeIndex = safeLen > 0 ? Math.min(Math.max(index, 0), safeLen - 1) : 0;
@@ -70,9 +89,28 @@ export function GalleryPhotoViewerModal({
     onIndexChange((safeIndex + 1) % safeLen);
   }, [onIndexChange, safeIndex, safeLen]);
 
+  const handleCommentsCountChange = useCallback(
+    (photoId: number, count: number) => {
+      setCommentsCount(count);
+      onCommentsCountChange?.(photoId, count);
+    },
+    [onCommentsCountChange],
+  );
+
   useEffect(() => {
     setHoveredPersonId(null);
+    setMobileSheet(null);
   }, [item?.id, open]);
+
+  useEffect(() => {
+    if (!isNarrow) {
+      setMobileSheet(null);
+    }
+  }, [isNarrow]);
+
+  useEffect(() => {
+    setCommentsCount(item?.comments_count ?? 0);
+  }, [item?.id, item?.comments_count]);
 
   useEffect(() => {
     if (!open) {
@@ -86,6 +124,10 @@ export function GalleryPhotoViewerModal({
       }
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (isNarrow && mobileSheet) {
+          setMobileSheet(null);
+          return;
+        }
         onClose();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -97,7 +139,7 @@ export function GalleryPhotoViewerModal({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose, goPrev, goNext]);
+  }, [open, onClose, goPrev, goNext, isNarrow, mobileSheet]);
 
   const captionTitle = useMemo(() => {
     if (!item) {
@@ -115,59 +157,168 @@ export function GalleryPhotoViewerModal({
   const tagged = item.tagged_people ?? [];
   const showNav = safeLen > 1;
 
-  const sidebar = (
+  const photoDetails = (
+    <>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'common.white', mb: 1, lineHeight: 1.35 }}>
+        {captionTitle}
+      </Typography>
+      {item.uploaded_by_email ? (
+        <Typography variant="body2" sx={{ color: 'grey.500', mb: 0.5 }}>
+          Загрузил: {item.uploaded_by_email}
+        </Typography>
+      ) : null}
+      <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mb: 1 }}>
+        {formatMetaDate(item.created_at)}
+      </Typography>
+      {tagged.length > 0 ? (
+        <Box sx={{ color: 'grey.400', typography: 'body2' }}>
+          <GalleryPhotoTaggedPeopleLinks
+            tagged={tagged}
+            onPersonClick={onClose}
+            onPersonHighlight={setHoveredPersonId}
+            highlightedPersonId={hoveredPersonId}
+            showTouchHint
+          />
+        </Box>
+      ) : null}
+    </>
+  );
+
+  const desktopSidebar = (
     <Box
       sx={{
-        width: { xs: '100%', md: 380 },
+        width: 380,
         maxWidth: '100%',
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'grey.900',
         color: 'grey.200',
-        borderLeft: { xs: 0, md: 1 },
-        borderTop: { xs: 1, md: 0 },
+        borderLeft: 1,
         borderColor: 'grey.800',
-        maxHeight: { xs: '42vh', md: '100%' },
+        maxHeight: '100%',
         minHeight: 0,
       }}
     >
-      <Box sx={{ px: 2.5, pt: 2, pb: 1.5, flexShrink: 0 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'common.white', mb: 1, lineHeight: 1.35 }}>
-          {captionTitle}
-        </Typography>
-        {item.uploaded_by_email ? (
-          <Typography variant="body2" sx={{ color: 'grey.500', mb: 0.5 }}>
-            Загрузил: {item.uploaded_by_email}
-          </Typography>
-        ) : null}
-        <Typography variant="caption" sx={{ color: 'grey.600', display: 'block', mb: 1 }}>
-          {formatMetaDate(item.created_at)}
-        </Typography>
-        {tagged.length > 0 ? (
-          <Box sx={{ color: 'grey.400', typography: 'body2' }}>
-            <GalleryPhotoTaggedPeopleLinks
-              tagged={tagged}
-              onPersonClick={onClose}
-              onPersonHighlight={setHoveredPersonId}
-              highlightedPersonId={hoveredPersonId}
-              showTouchHint
-            />
-          </Box>
-        ) : null}
-      </Box>
+      <Box sx={{ px: 2.5, pt: 2, pb: 1.5, flexShrink: 0 }}>{photoDetails}</Box>
 
       <Box sx={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', px: 0, pb: 2 }}>
         <GalleryPhotoCommentsPanel
           key={item.id}
           photoId={item.id}
           currentUserId={currentUserId}
-          onCommentsCountChange={onCommentsCountChange}
+          onCommentsCountChange={handleCommentsCountChange}
           surface="dark"
           sx={{ flex: '1 1 auto', minHeight: 0, borderTop: 1, borderColor: 'grey.800', pt: 1.5 }}
         />
       </Box>
     </Box>
+  );
+
+  const mobileActionBar = (
+    <Box
+      sx={{
+        flexShrink: 0,
+        display: 'flex',
+        gap: 1,
+        px: 1.5,
+        pt: 1,
+        pb: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+        bgcolor: 'grey.900',
+        borderTop: 1,
+        borderColor: 'grey.800',
+      }}
+    >
+      <Button
+        fullWidth
+        variant={mobileSheet === 'info' ? 'contained' : 'outlined'}
+        color="inherit"
+        startIcon={<InfoOutlinedIcon />}
+        onClick={() => setMobileSheet((s) => (s === 'info' ? null : 'info'))}
+        sx={{
+          color: 'grey.100',
+          borderColor: 'grey.700',
+          textTransform: 'none',
+          fontWeight: 600,
+        }}
+      >
+        Инфо
+      </Button>
+      <Button
+        fullWidth
+        variant={mobileSheet === 'comments' ? 'contained' : 'outlined'}
+        color="inherit"
+        startIcon={<CommentOutlinedIcon />}
+        onClick={() => setMobileSheet((s) => (s === 'comments' ? null : 'comments'))}
+        sx={{
+          color: 'grey.100',
+          borderColor: 'grey.700',
+          textTransform: 'none',
+          fontWeight: 600,
+        }}
+      >
+        {commentsCount > 0 ? `Комментарии (${commentsCount})` : 'Комментарии'}
+      </Button>
+    </Box>
+  );
+
+  const drawerZIndex = theme.zIndex.modal + 1;
+
+  const mobileInfoDrawer = (
+    <Drawer
+      anchor="bottom"
+      open={mobileSheet === 'info'}
+      onClose={() => setMobileSheet(null)}
+      sx={{ zIndex: drawerZIndex }}
+      slotProps={{ paper: { sx: mobileDrawerPaperSx } }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, pt: 1.5, pb: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'common.white' }}>
+          Информация
+        </Typography>
+        <IconButton aria-label="Закрыть" onClick={() => setMobileSheet(null)} sx={{ color: 'grey.400' }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <Box sx={{ px: 2.5, pb: 2.5, overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>{photoDetails}</Box>
+    </Drawer>
+  );
+
+  const mobileCommentsDrawer = (
+    <Drawer
+      anchor="bottom"
+      open={mobileSheet === 'comments'}
+      onClose={() => setMobileSheet(null)}
+      sx={{ zIndex: drawerZIndex }}
+      slotProps={{ paper: { sx: mobileDrawerPaperSx } }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, pt: 1.5, pb: 0.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'common.white' }}>
+          Комментарии{commentsCount > 0 ? ` (${commentsCount})` : ''}
+        </Typography>
+        <IconButton aria-label="Закрыть" onClick={() => setMobileSheet(null)} sx={{ color: 'grey.400' }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      {mobileSheet === 'comments' ? (
+        <GalleryPhotoCommentsPanel
+          key={item.id}
+          photoId={item.id}
+          currentUserId={currentUserId}
+          onCommentsCountChange={handleCommentsCountChange}
+          surface="dark"
+          hideTitle
+          sx={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            pb: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+          }}
+        />
+      ) : null}
+    </Drawer>
   );
 
   return (
@@ -181,6 +332,7 @@ export function GalleryPhotoViewerModal({
         },
       }}
     >
+      <>
       <Fade in={open}>
         <Box
           sx={{
@@ -213,11 +365,10 @@ export function GalleryPhotoViewerModal({
 
           <Box
             sx={{
-              flex: isNarrow ? '1 1 0' : '1 1 auto',
+              flex: '1 1 0',
               minWidth: 0,
               minHeight: 0,
               height: isNarrow ? undefined : '100%',
-              maxHeight: isNarrow ? 'calc(100dvh - 42vh)' : '100dvh',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -281,28 +432,26 @@ export function GalleryPhotoViewerModal({
                   justifyContent: 'center',
                 }}
               >
-              <GalleryPhotoRegionOverlay
-                imageUrl={resolveRailsBlobUrl(item.image_url)!}
-                alt={item.caption ?? ''}
-                maxHeight={
-                  isNarrow ? 'calc(100dvh - 42vh - 16px)' : 'calc(100dvh - 32px)'
-                }
-                maxWidth="100%"
-                highlights={
-                  hoveredPersonId != null
-                    ? tagged
-                        .filter((p) => p.id === hoveredPersonId && p.region != null)
-                        .map((p) => ({
-                          personId: p.id,
-                          region: p.region!,
-                          active: true,
-                        }))
-                    : []
-                }
-                onTouchOutsideHighlight={
-                  !canHover ? () => setHoveredPersonId(null) : undefined
-                }
-              />
+                <GalleryPhotoRegionOverlay
+                  imageUrl={resolveRailsBlobUrl(item.image_url)!}
+                  alt={item.caption ?? ''}
+                  maxHeight={isNarrow ? '100%' : 'calc(100dvh - 32px)'}
+                  maxWidth="100%"
+                  highlights={
+                    hoveredPersonId != null
+                      ? tagged
+                          .filter((p) => p.id === hoveredPersonId && p.region != null)
+                          .map((p) => ({
+                            personId: p.id,
+                            region: p.region!,
+                            active: true,
+                          }))
+                      : []
+                  }
+                  onTouchOutsideHighlight={
+                    !canHover ? () => setHoveredPersonId(null) : undefined
+                  }
+                />
               </Box>
             ) : (
               <Typography color="grey.500">Нет изображения</Typography>
@@ -328,9 +477,17 @@ export function GalleryPhotoViewerModal({
             ) : null}
           </Box>
 
-          {sidebar}
+          {isNarrow ? mobileActionBar : desktopSidebar}
         </Box>
       </Fade>
+
+      {isNarrow ? (
+        <>
+          {mobileInfoDrawer}
+          {mobileCommentsDrawer}
+        </>
+      ) : null}
+      </>
     </Modal>
   );
 }

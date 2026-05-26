@@ -14,6 +14,9 @@ import {
   type GalleryPhotoComment,
 } from '../api/galleryPhotoApi';
 
+/** Максимум видимых строк черновика; дальше прокрутка внутри поля */
+const DRAFT_MAX_ROWS = 6;
+
 function formatWhen(iso: string): string {
   if (!iso) {
     return '';
@@ -36,6 +39,8 @@ export interface GalleryPhotoCommentsPanelProps {
   sx?: SxProps<Theme>;
   /** Тёмная панель в полноэкранном просмотре — контрастные поля и карточки комментариев */
   surface?: 'light' | 'dark';
+  /** Скрыть заголовок «Комментарии» (заголовок в drawer) */
+  hideTitle?: boolean;
 }
 
 export function GalleryPhotoCommentsPanel({
@@ -44,6 +49,7 @@ export function GalleryPhotoCommentsPanel({
   onCommentsCountChange,
   sx: sxProp,
   surface = 'light',
+  hideTitle = false,
 }: GalleryPhotoCommentsPanelProps) {
   const [comments, setComments] = useState<GalleryPhotoComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,17 +103,28 @@ export function GalleryPhotoCommentsPanel({
 
   const dark = surface === 'dark';
 
+  const draftFieldSx = dark
+    ? {
+        '& .MuiOutlinedInput-root': {
+          bgcolor: 'grey.800',
+          color: 'grey.100',
+        },
+        '& .MuiInputLabel-root': { color: 'grey.500' },
+        '& .MuiFormHelperText-root': { color: 'grey.600' },
+      }
+    : undefined;
+
   return (
     <Box
       sx={{
         px: 2,
         py: 1.5,
-        maxHeight: dark ? 'none' : '38vh',
+        maxHeight: dark ? undefined : '38vh',
         flex: dark ? '1 1 auto' : undefined,
         minHeight: dark ? 0 : undefined,
-        display: dark ? 'flex' : undefined,
-        flexDirection: dark ? 'column' : undefined,
-        overflowY: dark ? 'hidden' : 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
         borderTop: dark ? 0 : 1,
         borderColor: 'divider',
         bgcolor: dark ? 'transparent' : 'background.paper',
@@ -115,68 +132,75 @@ export function GalleryPhotoCommentsPanel({
         ...sxProp,
       }}
     >
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, flexShrink: 0 }}>
-        Комментарии
-      </Typography>
+      <Box
+        sx={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          overflowY: 'auto',
+          pr: dark ? 0.5 : undefined,
+        }}
+      >
+        {hideTitle ? null : (
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+            Комментарии
+          </Typography>
+        )}
 
-      {loading ? (
-        <Typography variant="body2" color={dark ? 'grey.400' : 'text.secondary'} sx={{ mb: 1, flexShrink: 0 }}>
-          Загрузка…
-        </Typography>
-      ) : loadError ? (
-        <Alert severity="error" sx={{ mb: 1, flexShrink: 0 }}>
-          {loadError}
-        </Alert>
-      ) : comments.length === 0 ? (
-        <Typography variant="body2" color={dark ? 'grey.500' : 'text.secondary'} sx={{ mb: 1, flexShrink: 0 }}>
-          Пока нет комментариев.
-        </Typography>
-      ) : (
-        <Stack
-          spacing={1}
-          sx={{
-            mb: 2,
-            flex: dark ? '1 1 auto' : undefined,
-            minHeight: dark ? 0 : undefined,
-            overflowY: dark ? 'auto' : undefined,
-            pr: dark ? 0.5 : undefined,
-          }}
-        >
-          {comments.map((c) => (
-            <Paper
-              key={c.id}
-              variant="outlined"
-              sx={{
-                p: 1,
-                bgcolor: dark ? 'grey.800' : 'action.hover',
-                borderColor: dark ? 'grey.700' : undefined,
-              }}
-            >
-              <Typography
-                variant="caption"
-                color={dark ? 'grey.500' : 'text.secondary'}
-                sx={{ display: 'block', mb: 0.5 }}
+        {loading ? (
+          <Typography variant="body2" color={dark ? 'grey.400' : 'text.secondary'} sx={{ mb: 1 }}>
+            Загрузка…
+          </Typography>
+        ) : loadError ? (
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {loadError}
+          </Alert>
+        ) : comments.length === 0 ? (
+          <Typography variant="body2" color={dark ? 'grey.500' : 'text.secondary'} sx={{ mb: 1 }}>
+            Пока нет комментариев.
+          </Typography>
+        ) : (
+          <Stack spacing={1} sx={{ mb: 1 }}>
+            {comments.map((c) => (
+              <Paper
+                key={c.id}
+                variant="outlined"
+                sx={{
+                  p: 1,
+                  bgcolor: dark ? 'grey.800' : 'action.hover',
+                  borderColor: dark ? 'grey.700' : undefined,
+                }}
               >
-                {`${formatWhen(c.created_at)}${c.author_email ? ` · ${c.author_email}` : ''}${
-                  currentUserId != null && c.user_id === currentUserId ? ' · вы' : ''
-                }`}
-              </Typography>
-              <Typography
-                variant="body2"
-                component="div"
-                sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: dark ? 'grey.100' : undefined }}
-              >
-                {c.body}
-              </Typography>
-            </Paper>
-          ))}
-        </Stack>
-      )}
+                <Typography
+                  variant="caption"
+                  color={dark ? 'grey.500' : 'text.secondary'}
+                  sx={{ display: 'block', mb: 0.5 }}
+                >
+                  {`${formatWhen(c.created_at)}${c.author_email ? ` · ${c.author_email}` : ''}${
+                    currentUserId != null && c.user_id === currentUserId ? ' · вы' : ''
+                  }`}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  component="div"
+                  sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: dark ? 'grey.100' : undefined }}
+                >
+                  {c.body}
+                </Typography>
+              </Paper>
+            ))}
+          </Stack>
+        )}
+      </Box>
 
       <Box
         component="form"
         onSubmit={(ev) => void handleSubmit(ev)}
-        sx={{ flexShrink: 0, mt: dark ? 'auto' : undefined, pt: dark ? 1 : undefined }}
+        sx={{
+          flexShrink: 0,
+          pt: 1,
+          borderTop: 1,
+          borderColor: dark ? 'grey.800' : 'divider',
+        }}
       >
         <Stack spacing={1}>
           {formError ? <Alert severity="error">{formError}</Alert> : null}
@@ -187,21 +211,11 @@ export function GalleryPhotoCommentsPanel({
             fullWidth
             multiline
             minRows={2}
+            maxRows={DRAFT_MAX_ROWS}
             size="small"
             slotProps={{ htmlInput: { maxLength: MAX_COMMENT_BODY } }}
             helperText={`${draft.length} / ${MAX_COMMENT_BODY}`}
-            sx={
-              dark
-                ? {
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: 'grey.800',
-                      color: 'grey.100',
-                    },
-                    '& .MuiInputLabel-root': { color: 'grey.500' },
-                    '& .MuiFormHelperText-root': { color: 'grey.600' },
-                  }
-                : undefined
-            }
+            sx={draftFieldSx}
           />
           <Button type="submit" variant="contained" size="small" disabled={submitting}>
             {submitting ? 'Отправка…' : 'Отправить'}
