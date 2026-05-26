@@ -14,11 +14,32 @@ import { resolveRailsBlobUrl } from '../api/assetUrls';
 import type { GalleryPersonTagInput } from '../gallery/galleryPhotoRegion';
 import type { GalleryPhotoRegion } from '../gallery/galleryPhotoRegion';
 import { personDisplayName } from '../api/personApi';
-import type { ChartPersonOption } from '../familyChartApi';
+import { chartPersonInitials, type ChartPersonOption } from '../familyChartApi';
 import type { GalleryTaggedPerson } from '../api/galleryPhotoApi';
 
 import { ChartPersonAutocomplete } from './ChartPersonAutocomplete';
+import { ChartPersonAvatar } from './ChartPersonAvatar';
 import { GalleryPhotoRegionOverlay } from './GalleryPhotoRegionOverlay';
+
+function taggedPersonDisplay(
+  personId: number,
+  personById: Map<number, ChartPersonOption>,
+  initialTagged: GalleryTaggedPerson[],
+): { label: string; avatarUrl: string | null; initials: string } {
+  const opt = personById.get(personId);
+  if (opt) {
+    return { label: opt.label, avatarUrl: opt.avatarUrl, initials: opt.initials };
+  }
+  const fromInitial = initialTagged.find((p) => p.id === personId);
+  if (fromInitial) {
+    return {
+      label: personDisplayName(fromInitial),
+      avatarUrl: null,
+      initials: chartPersonInitials(fromInitial.first_name, fromInitial.last_name ?? ''),
+    };
+  }
+  return { label: `ID ${personId}`, avatarUrl: null, initials: '?' };
+}
 
 function taggedToInputs(tagged: GalleryTaggedPerson[]): GalleryPersonTagInput[] {
   return tagged.map((p) => ({
@@ -118,13 +139,11 @@ export function GalleryPhotoPersonTagEditor({
       {tags.length > 0 ? (
         <Stack spacing={0.75}>
           {tags.map((t) => {
-            const opt = personById.get(t.person_id);
-            const label =
-              opt?.label ??
-              (() => {
-                const fromInitial = initialTagged.find((p) => p.id === t.person_id);
-                return fromInitial ? personDisplayName(fromInitial) : `ID ${t.person_id}`;
-              })();
+            const { label, avatarUrl, initials } = taggedPersonDisplay(
+              t.person_id,
+              personById,
+              initialTagged,
+            );
             const isHovered = hoveredPersonId === t.person_id;
             const hasRegion = t.region != null;
             return (
@@ -138,8 +157,7 @@ export function GalleryPhotoPersonTagEditor({
                 sx={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: 0.5,
+                  gap: 1,
                   px: 1.25,
                   py: 0.75,
                   borderRadius: 1,
@@ -154,39 +172,66 @@ export function GalleryPhotoPersonTagEditor({
                     : {},
                 }}
               >
-                <Typography
-                  variant="body2"
+                <ChartPersonAvatar
+                  avatarUrl={avatarUrl}
+                  initials={initials}
+                  size="sidebar"
+                />
+                <Box
                   sx={{
-                    fontWeight: isHovered ? 700 : 500,
-                    color: isHovered ? 'warning.dark' : 'text.primary',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: 0.5,
                     flex: '1 1 auto',
                     minWidth: 0,
-                    wordBreak: 'break-word',
                   }}
                 >
-                  {label}
-                  {!hasRegion ? (
-                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
-                      (без области)
-                    </Typography>
-                  ) : null}
-                </Typography>
-                {!disabled ? (
-                  <Button
-                    size="small"
-                    color="inherit"
-                    sx={{ minWidth: 0, px: 0.75, flexShrink: 0, color: 'text.secondary', mt: -0.25 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeTag(t.person_id);
-                      if (hoveredPersonId === t.person_id) {
-                        setHoveredPersonId(null);
-                      }
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: isHovered ? 700 : 500,
+                      color: isHovered ? 'warning.dark' : 'text.primary',
+                      flex: '1 1 auto',
+                      minWidth: 0,
+                      wordBreak: 'break-word',
                     }}
                   >
-                    Убрать
-                  </Button>
-                ) : null}
+                    {label}
+                    {!hasRegion ? (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ ml: 0.75 }}
+                      >
+                        (без области)
+                      </Typography>
+                    ) : null}
+                  </Typography>
+                  {!disabled ? (
+                    <Button
+                      size="small"
+                      color="inherit"
+                      sx={{
+                        minWidth: 0,
+                        px: 0.75,
+                        flexShrink: 0,
+                        color: 'text.secondary',
+                        mt: -0.25,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeTag(t.person_id);
+                        if (hoveredPersonId === t.person_id) {
+                          setHoveredPersonId(null);
+                        }
+                      }}
+                    >
+                      Убрать
+                    </Button>
+                  ) : null}
+                </Box>
               </Box>
             );
           })}

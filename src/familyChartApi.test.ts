@@ -1,4 +1,5 @@
 import {
+  chartPersonInitials,
   chartPersonLinkSelectOptions,
   chartPersonSearchText,
   type ChartPersonOption,
@@ -27,6 +28,12 @@ const sampleChart: FamilyChartData = [
   },
 ];
 
+describe('chartPersonInitials', () => {
+  it('uses first letters of first and last name', () => {
+    expect(chartPersonInitials('Иван', 'Петров')).toBe('ИП');
+  });
+});
+
 describe('chartPersonSearchText', () => {
   it('includes first and last in both orders', () => {
     const text = chartPersonSearchText('Иван', 'Петров', 1);
@@ -51,6 +58,24 @@ describe('chartPersonLinkSelectOptions', () => {
     const ivans = opts.filter((o) => o.searchText.includes('Иван'));
     expect(ivans.length).toBeGreaterThanOrEqual(2);
     expect(new Set(ivans.map((o) => o.id)).size).toBe(ivans.length);
+  });
+
+  it('includes avatar url from chart node data', () => {
+    const chart: FamilyChartData = [
+      {
+        id: '10',
+        person_id: 10,
+        data: {
+          gender: 'M',
+          'first name': 'А',
+          'last name': 'Б',
+          avatar: 'https://example.test/photo.jpg',
+        },
+        rels: { parents: [], spouses: [], children: [] },
+      },
+    ];
+    const opts = chartPersonLinkSelectOptions(chart);
+    expect(opts[0]?.avatarUrl).toBe('https://example.test/photo.jpg');
   });
 });
 

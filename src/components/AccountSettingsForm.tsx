@@ -80,6 +80,8 @@ export function AccountSettingsForm({
         id: pid,
         label: `Персона #${pid} (нет в текущем древе на экране)`,
         searchText: `персона ${pid}`,
+        avatarUrl: null,
+        initials: '#',
       },
     ].sort((a, b) => a.label.localeCompare(b.label, 'ru'));
   }, [chart, user?.person_id]);

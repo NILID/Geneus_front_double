@@ -124,6 +124,8 @@ export interface ChartPersonOption {
   label: string;
   /** Только ФИО для поиска в autocomplete (без годов и скобок). */
   searchText: string;
+  avatarUrl: string | null;
+  initials: string;
 }
 
 function chartNodePersonId(node: FamilyChartPerson): number | null {
@@ -141,6 +143,26 @@ function chartNodeNameParts(node: FamilyChartPerson): { first: string; last: str
   const first = typeof d?.['first name'] === 'string' ? d['first name'].trim() : '';
   const last = typeof d?.['last name'] === 'string' ? d['last name'].trim() : '';
   return { first, last };
+}
+
+export function chartPersonInitials(first: string, last: string): string {
+  const fn = first.trim();
+  const ln = last.trim();
+  if (fn && ln) {
+    return (fn[0] + ln[0]).toUpperCase();
+  }
+  if (fn.length >= 2) {
+    return fn.slice(0, 2).toUpperCase();
+  }
+  return fn.slice(0, 1).toUpperCase() || '?';
+}
+
+function chartNodeAvatarUrl(d: Record<string, unknown>): string | null {
+  const raw = d.avatar;
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    return null;
+  }
+  return raw.trim();
 }
 
 /** Строка для фильтрации по вводу: варианты порядка имени и фамилии. */
@@ -177,6 +199,8 @@ function collectChartPersonOptions(
       id: rawId,
       label,
       searchText: chartPersonSearchText(first, last, rawId),
+      avatarUrl: chartNodeAvatarUrl(d),
+      initials: chartPersonInitials(first, last),
     });
   }
   return Array.from(byId.values()).sort((a, b) => a.label.localeCompare(b.label, 'ru'));
