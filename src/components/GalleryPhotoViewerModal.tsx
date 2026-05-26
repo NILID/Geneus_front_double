@@ -49,6 +49,7 @@ export function GalleryPhotoViewerModal({
 }: GalleryPhotoViewerModalProps) {
   const theme = useTheme();
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
+  const canHover = useMediaQuery('(hover: hover) and (pointer: fine)');
   const [hoveredPersonId, setHoveredPersonId] = useState<number | null>(null);
 
   const safeLen = photos.length;
@@ -297,6 +298,9 @@ export function GalleryPhotoViewerModal({
                           active: true,
                         }))
                     : []
+                }
+                onTouchOutsideHighlight={
+                  !canHover ? () => setHoveredPersonId(null) : undefined
                 }
               />
               </Box>

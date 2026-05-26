@@ -96,7 +96,8 @@ export function GalleryPhotoTaggedPeopleLinks({
           component="span"
           sx={{ display: 'block', mt: 0.75, color: 'grey.600', typography: 'caption', lineHeight: 1.35 }}
         >
-          Нажмите на имя, чтобы показать человека на фото. Повторное нажатие — открыть профиль.
+          Нажмите на имя, чтобы показать человека на фото. Нажмите на другое место фото, чтобы скрыть
+          рамку. Повторное нажатие на имя — открыть профиль.
         </Box>
       ) : null}
     </Box>

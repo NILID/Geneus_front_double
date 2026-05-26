@@ -6,6 +6,7 @@ import {
   clampRegion,
   pixelRectToRegion,
   regionToPercent,
+  regionToPixelRect,
   type GalleryPhotoRegion,
   type RegionEditHandle,
 } from '../gallery/galleryPhotoRegion';
@@ -30,6 +31,8 @@ interface GalleryPhotoRegionOverlayProps {
   onRegionDrawn?: (region: GalleryPhotoRegion) => void;
   onRegionChange?: (personId: number, region: GalleryPhotoRegion) => void;
   onRegionFocus?: (personId: number) => void;
+  /** Сенсорные экраны: снять подсветку при нажатии на фото вне активной области */
+  onTouchOutsideHighlight?: () => void;
   maxHeight?: string | number | Record<string, string | number>;
   maxWidth?: string | number | Record<string, string | number>;
 }
@@ -206,6 +209,7 @@ export function GalleryPhotoRegionOverlay({
   onRegionDrawn,
   onRegionChange,
   onRegionFocus,
+  onTouchOutsideHighlight,
   maxHeight = 'min(60vh, 480px)',
   maxWidth = '100%',
 }: GalleryPhotoRegionOverlayProps) {
@@ -351,6 +355,36 @@ export function GalleryPhotoRegionOverlay({
 
   const overlayInteractive = drawing || editable;
 
+  const handleTouchOutsideHighlight = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!onTouchOutsideHighlight || overlayInteractive || size.w <= 0 || size.h <= 0) {
+        return;
+      }
+      const active = displayHighlights.find((h) => h.active);
+      if (!active) {
+        return;
+      }
+      const p = pointerPosFromClient(clientX, clientY);
+      const rect = regionToPixelRect(active.region, size.w, size.h);
+      const inside =
+        p.x >= rect.left &&
+        p.x <= rect.left + rect.width &&
+        p.y >= rect.top &&
+        p.y <= rect.top + rect.height;
+      if (!inside) {
+        onTouchOutsideHighlight();
+      }
+    },
+    [
+      displayHighlights,
+      onTouchOutsideHighlight,
+      overlayInteractive,
+      pointerPosFromClient,
+      size.h,
+      size.w,
+    ],
+  );
+
   return (
     <Box
       ref={containerRef}
@@ -363,6 +397,16 @@ export function GalleryPhotoRegionOverlay({
         cursor: drawing ? 'crosshair' : 'default',
         touchAction: overlayInteractive ? 'none' : 'auto',
       }}
+      onClick={
+        onTouchOutsideHighlight && !overlayInteractive
+          ? (e) => {
+              if (e.button !== 0) {
+                return;
+              }
+              handleTouchOutsideHighlight(e.clientX, e.clientY);
+            }
+          : undefined
+      }
       onPointerDown={
         drawing
           ? (e) => {
