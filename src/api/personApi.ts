@@ -256,6 +256,8 @@ export interface PersonUpdateInput {
   death_longitude: number | null;
   /** If set, request is sent as multipart/form-data with the file. */
   avatar?: File | null;
+  /** When true, removes the existing avatar on save. */
+  remove_avatar?: boolean;
 }
 
 function trimToNull(s: string | null | undefined): string | null {
@@ -307,13 +309,20 @@ export async function updatePerson(
   input: PersonUpdateInput,
 ): Promise<PersonDetail> {
   const hasAvatar = input.avatar instanceof File;
+  const removeAvatar = Boolean(input.remove_avatar);
+  const useMultipart = hasAvatar || removeAvatar;
   const res = await fetch(
     `${API_BASE}/api/v1/people/${encodeURIComponent(id)}`,
-    hasAvatar
+    useMultipart
       ? (() => {
           const fd = new FormData();
           appendPersonFormData(fd, input);
-          fd.append('person[avatar]', input.avatar!);
+          if (hasAvatar) {
+            fd.append('person[avatar]', input.avatar!);
+          }
+          if (removeAvatar) {
+            fd.append('person[remove_avatar]', '1');
+          }
           const h = authHeaders();
           return {
             ...NO_STORE,
@@ -346,6 +355,7 @@ export async function updatePerson(
               birth_longitude: input.birth_longitude,
               death_latitude: input.death_latitude,
               death_longitude: input.death_longitude,
+              ...(removeAvatar ? { remove_avatar: true } : {}),
             },
           }),
         },

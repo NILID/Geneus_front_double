@@ -80,6 +80,7 @@ export function EditPersonPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -135,6 +136,7 @@ export function EditPersonPage() {
         }
 
         setAvatarUrl(p.avatar_url ?? null);
+        setRemoveAvatar(false);
       })
       .catch((e: unknown) => {
         if (!cancelled) {
@@ -167,9 +169,11 @@ export function EditPersonPage() {
       ...personRecord,
       first_name: firstName,
       last_name: lastName.trim() ? lastName : null,
-      avatar_url: avatarPreview ?? avatarUrl ?? personRecord.avatar_url,
+      avatar_url:
+        avatarPreview ??
+        (removeAvatar ? null : (avatarUrl ?? personRecord.avatar_url)),
     };
-  }, [personRecord, firstName, lastName, avatarPreview, avatarUrl]);
+  }, [personRecord, firstName, lastName, avatarPreview, avatarUrl, removeAvatar]);
 
   function onAvatarPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -182,6 +186,7 @@ export function EditPersonPage() {
       return;
     }
     setSaveError(null);
+    setRemoveAvatar(false);
     setAvatarPreview((prev) => {
       if (prev) {
         URL.revokeObjectURL(prev);
@@ -200,6 +205,17 @@ export function EditPersonPage() {
       return null;
     });
   }
+
+  function removeExistingAvatar() {
+    clearPickedAvatar();
+    setRemoveAvatar(true);
+    setAvatarUrl(null);
+  }
+
+  const displayedAvatarSrc =
+    avatarPreview ?? (removeAvatar ? null : resolveRailsBlobUrl(avatarUrl));
+  const hasSavedAvatar = Boolean(avatarUrl) && !removeAvatar;
+  const hasVisibleAvatar = Boolean(displayedAvatarSrc);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -275,6 +291,8 @@ export function EditPersonPage() {
     };
     if (avatarFile) {
       input.avatar = avatarFile;
+    } else if (removeAvatar) {
+      input.remove_avatar = true;
     }
 
     try {
@@ -377,18 +395,29 @@ export function EditPersonPage() {
                 sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}
               >
                 <MuiAvatar
-                  src={avatarPreview ?? resolveRailsBlobUrl(avatarUrl)}
+                  src={displayedAvatarSrc ?? undefined}
                   alt={personDisplayName({ first_name: firstName, last_name: lastName || null })}
                   sx={{ width: 96, height: 96 }}
                 />
                 <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
                   <Button component="label" variant="outlined" disabled={saving}>
-                    {avatarUrl || avatarFile ? 'Выбрать другое фото' : 'Загрузить фото'}
+                    {hasVisibleAvatar || avatarFile ? 'Выбрать другое фото' : 'Загрузить фото'}
                     <input type="file" accept="image/*" hidden onChange={onAvatarPicked} />
                   </Button>
                   {avatarFile && (
                     <Button type="button" size="small" onClick={clearPickedAvatar} disabled={saving}>
                       Сбросить выбор
+                    </Button>
+                  )}
+                  {hasSavedAvatar && !avatarFile && (
+                    <Button
+                      type="button"
+                      size="small"
+                      color="error"
+                      onClick={removeExistingAvatar}
+                      disabled={saving}
+                    >
+                      Удалить аватар
                     </Button>
                   )}
                 </Stack>
