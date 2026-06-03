@@ -1,4 +1,5 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import ImageList from '@mui/material/ImageList';
@@ -111,6 +112,10 @@ export interface GalleryPhotoMasonryProps {
   menuIdPrefix?: string;
   /** После добавления комментария в просмотре — обновить счётчик в родительском состоянии */
   onGalleryPhotoCommentsCountChange?: (photoId: number, commentsCount: number) => void;
+  /** Подгрузка следующей страницы при прокрутке к низу сетки */
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -125,11 +130,35 @@ export function GalleryPhotoMasonry({
   onDelete,
   menuIdPrefix = 'gallery-photo',
   onGalleryPhotoCommentsCountChange,
+  onLoadMore,
+  hasMore = false,
+  loadingMore = false,
   sx,
 }: GalleryPhotoMasonryProps) {
   const reactId = useId();
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+
+  useEffect(() => {
+    if (!onLoadMore || !hasMore || loadingMore) {
+      return;
+    }
+    const node = loadMoreSentinelRef.current;
+    if (!node) {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          onLoadMore();
+        }
+      },
+      { root: null, rootMargin: '240px 0px', threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [onLoadMore, hasMore, loadingMore]);
 
   if (photos.length === 0) {
     return null;
@@ -233,6 +262,21 @@ export function GalleryPhotoMasonry({
           );
         })}
       </ImageList>
+      {onLoadMore && hasMore ? (
+        <Box
+          ref={loadMoreSentinelRef}
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 48,
+            py: 2,
+          }}
+          aria-hidden={!loadingMore}
+        >
+          {loadingMore ? <CircularProgress size={28} aria-label="Загрузка фотографий" /> : null}
+        </Box>
+      ) : null}
     </Box>
   );
 }

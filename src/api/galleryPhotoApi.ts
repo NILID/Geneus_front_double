@@ -42,6 +42,21 @@ export interface GalleryPhoto {
   comments_count: number;
 }
 
+export interface GalleryPhotosPaginationMeta {
+  page: number;
+  per_page: number;
+  total_count: number;
+  total_pages: number;
+}
+
+export interface GalleryPhotosPageResult {
+  photos: GalleryPhoto[];
+  meta: GalleryPhotosPaginationMeta;
+}
+
+/** Размер страницы галереи (совпадает с Pagy::DEFAULT[:limit] на бэке). */
+export const GALLERY_PHOTOS_PAGE_SIZE = 10;
+
 function authHeaders(jsonBody: boolean): Headers {
   const h = new Headers();
   h.set('Accept', 'application/json');
@@ -76,8 +91,28 @@ async function parseErrorMessage(res: Response): Promise<string> {
   return `${res.status} ${res.statusText}`;
 }
 
-export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
-  const res = await fetch(`${API_BASE}/api/v1/gallery_photos`, {
+function normalizeGalleryPhotosMeta(raw: unknown): GalleryPhotosPaginationMeta {
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const page = Number(o.page);
+  const perPage = Number(o.per_page);
+  const totalCount = Number(o.total_count);
+  const totalPages = Number(o.total_pages);
+  return {
+    page: Number.isFinite(page) && page > 0 ? page : 1,
+    per_page: Number.isFinite(perPage) && perPage > 0 ? perPage : GALLERY_PHOTOS_PAGE_SIZE,
+    total_count: Number.isFinite(totalCount) && totalCount >= 0 ? totalCount : 0,
+    total_pages: Number.isFinite(totalPages) && totalPages >= 0 ? totalPages : 0,
+  };
+}
+
+export async function fetchGalleryPhotosPage(
+  page = 1,
+  perPage = GALLERY_PHOTOS_PAGE_SIZE,
+): Promise<GalleryPhotosPageResult> {
+  const sp = new URLSearchParams();
+  sp.set('page', String(page));
+  sp.set('per_page', String(perPage));
+  const res = await fetch(`${API_BASE}/api/v1/gallery_photos?${sp}`, {
     ...NO_STORE,
     headers: authHeaders(false),
   });
@@ -85,11 +120,21 @@ export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
     throw new Error(await parseErrorMessage(res));
   }
   const json: unknown = await res.json();
-  const list = (json as { gallery_photos?: GalleryPhoto[] }).gallery_photos;
+  const body = json as { gallery_photos?: GalleryPhoto[]; meta?: unknown };
+  const list = body.gallery_photos;
   if (!Array.isArray(list)) {
     throw new Error('Некорректный ответ сервера');
   }
-  return list.map(normalizeGalleryPhoto);
+  return {
+    photos: list.map(normalizeGalleryPhoto),
+    meta: normalizeGalleryPhotosMeta(body.meta),
+  };
+}
+
+/** Первая страница с увеличенным лимитом (например, превью на главной). */
+export async function fetchGalleryPhotos(perPage?: number): Promise<GalleryPhoto[]> {
+  const { photos } = await fetchGalleryPhotosPage(1, perPage ?? GALLERY_PHOTOS_PAGE_SIZE);
+  return photos;
 }
 
 function normalizeTaggedPerson(p: GalleryTaggedPerson): GalleryTaggedPerson {

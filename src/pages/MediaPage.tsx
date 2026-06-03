@@ -18,10 +18,12 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   deleteGalleryPhoto,
-  fetchGalleryPhotos,
+  fetchGalleryPhotosPage,
+  GALLERY_PHOTOS_PAGE_SIZE,
   updateGalleryPhoto,
   uploadGalleryPhoto,
   type GalleryPhoto,
+  type GalleryPhotosPaginationMeta,
 } from '../api/galleryPhotoApi';
 import { useAuth } from '../auth/AuthContext';
 import { canEditGenealogy } from '../auth/roles';
@@ -53,7 +55,9 @@ export function MediaPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
+  const [galleryMeta, setGalleryMeta] = useState<GalleryPhotosPaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadCaption, setUploadCaption] = useState('');
   const [uploadTakenYear, setUploadTakenYear] = useState('');
@@ -96,12 +100,39 @@ export function MediaPage() {
 
   const load = useCallback(() => {
     setError(null);
-    return fetchGalleryPhotos()
-      .then(setPhotos)
+    return fetchGalleryPhotosPage(1, GALLERY_PHOTOS_PAGE_SIZE)
+      .then(({ photos: list, meta }) => {
+        setPhotos(list);
+        setGalleryMeta(meta);
+      })
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Не удалось загрузить галерею');
       });
   }, []);
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || loading || !galleryMeta || galleryMeta.page >= galleryMeta.total_pages) {
+      return;
+    }
+    setLoadingMore(true);
+    setError(null);
+    fetchGalleryPhotosPage(galleryMeta.page + 1, GALLERY_PHOTOS_PAGE_SIZE)
+      .then(({ photos: list, meta }) => {
+        setGalleryMeta(meta);
+        setPhotos((prev) => {
+          const ids = new Set(prev.map((p) => p.id));
+          const next = list.filter((p) => !ids.has(p.id));
+          return next.length > 0 ? [...prev, ...next] : prev;
+        });
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : 'Не удалось загрузить фотографии');
+      })
+      .finally(() => setLoadingMore(false));
+  }, [galleryMeta, loading, loadingMore]);
+
+  const hasMoreGalleryPhotos =
+    galleryMeta != null && galleryMeta.page < galleryMeta.total_pages;
 
   useEffect(() => {
     let cancelled = false;
@@ -124,10 +155,11 @@ export function MediaPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchGalleryPhotos()
-      .then((list) => {
+    fetchGalleryPhotosPage(1, GALLERY_PHOTOS_PAGE_SIZE)
+      .then(({ photos: list, meta }) => {
         if (!cancelled) {
           setPhotos(list);
+          setGalleryMeta(meta);
         }
       })
       .catch((e: unknown) => {
@@ -373,6 +405,9 @@ export function MediaPage() {
           cols={galleryCols}
           gap={12}
           sx={{ width: '100%' }}
+          onLoadMore={loadMore}
+          hasMore={hasMoreGalleryPhotos}
+          loadingMore={loadingMore}
           menuIdPrefix="media-gallery-photo"
           currentUserId={user?.id}
           onGalleryPhotoCommentsCountChange={(photoId, commentsCount) => {

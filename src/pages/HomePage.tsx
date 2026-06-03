@@ -111,13 +111,13 @@ export function HomePage() {
     try {
       const [ppl, ph, bdays, stats] = await Promise.all([
         fetchRecentPeople(),
-        fetchGalleryPhotos(),
+        fetchGalleryPhotos(HOME_PHOTO_LIMIT),
         fetchUpcomingBirthdays(),
         fetchHomeStats(),
       ]);
       setPeople(ppl.slice(0, HOME_PEOPLE_LIMIT));
       setBirthdays(bdays);
-      setPhotos(ph.slice(0, HOME_PHOTO_LIMIT));
+      setPhotos(ph);
       setHomeStats(stats);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить главную');
