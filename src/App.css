@@ -41,3 +41,49 @@
 .f3 div.card:has(> a.f3-person-profile-bar) .card-inner {
   padding-bottom: 36px;
 }
+
+/* Кнопка «+» только на активной (main) карточке — см. FamilyChartEditor setOnCardUpdate */
+.f3 div.card:not(.card-main) > .f3-geneus-add-relative-btn {
+  display: none;
+}
+
+/* Внутри .card (как .mini-tree): над блоком персоны, слева */
+.f3 div.card > .f3-geneus-add-relative-btn {
+  position: absolute;
+  top: -15px;
+  left: -2px;
+  right: auto;
+  margin: 0;
+  z-index: 4;
+  pointer-events: auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 28px;
+  text-align: center;
+  font-weight: 600;
+  color: #90caf9;
+  background: #161b22;
+  border: 1px solid rgba(144, 202, 249, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.f3 div.card > .f3-geneus-add-relative-btn:hover {
+  color: #e3f2fd;
+  background: #21262d;
+  border-color: rgba(144, 202, 249, 0.55);
+  transform: scale(1.06);
+}
+
+.f3 div.card > .f3-geneus-add-relative-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 1px;
+}

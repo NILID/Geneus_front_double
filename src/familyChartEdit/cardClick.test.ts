@@ -4,6 +4,7 @@ import {
   hasFamilyChartCardClickGuard,
   isFamilyChartNonEditClick,
   wireFamilyChartCardClickForEdit,
+  wireFamilyChartCardClickForRelativeAdd,
   type CardClickHandlers,
 } from './cardClick';
 
@@ -87,6 +88,38 @@ describe('wireFamilyChartCardClickForEdit', () => {
     wireFamilyChartCardClickForEdit(editTree, card);
     expect(hasFamilyChartCardClickGuard(card)).toBe(true);
     expect((card as Record<string, unknown>)[FAMILY_CHART_CARD_CLICK_GUARD_KEY]).toBe(true);
+  });
+});
+
+describe('wireFamilyChartCardClickForRelativeAdd', () => {
+  it('opens external handler for _new_rel_data cards without calling editTree.open', () => {
+    let onCardClick: (e: Event, d: unknown) => void = () => {};
+    const card = {
+      onCardClick,
+      onCardClickDefault: jest.fn(),
+      setOnCardClick(fn: (e: Event, d: unknown) => void) {
+        onCardClick = fn;
+        this.onCardClick = fn;
+      },
+    };
+    const onNewRelativeCardClick = jest.fn();
+    const editTree = {
+      setCardClickOpen: jest.fn(),
+      isAddingRelative: () => true,
+      addRelativeInstance: { onCancel: jest.fn() },
+    };
+    wireFamilyChartCardClickForRelativeAdd(editTree, card, { onNewRelativeCardClick });
+
+    const inner = document.createElement('div');
+    const cardEl = document.createElement('div');
+    cardEl.className = 'card';
+    cardEl.appendChild(inner);
+    const clickOnInner = new MouseEvent('click', { bubbles: true });
+    Object.defineProperty(clickOnInner, 'target', { value: inner });
+
+    onCardClick(clickOnInner, { data: { id: 'x', _new_rel_data: { rel_type: 'father' } } });
+    expect(onNewRelativeCardClick).toHaveBeenCalled();
+    expect(editTree.setCardClickOpen).not.toHaveBeenCalled();
   });
 });
 

@@ -24,7 +24,8 @@ export function isFamilyChartNonEditClick(event: Event): boolean {
   return Boolean(
     target.closest('.mini-tree') ||
       target.closest('.f3-toggle-div') ||
-      target.closest('.f3-person-profile-bar'),
+      target.closest('.f3-person-profile-bar') ||
+      target.closest('.f3-geneus-add-relative-btn'),
   );
 }
 
@@ -72,6 +73,67 @@ export function wireFamilyChartCardClickForEdit(
 ): void {
   editTree.setCardClickOpen(card);
   wrapCardClickOpenWithoutAuxiliary(card);
+  markCardClickGuardApplied(card);
+}
+
+export type ChartCardDatum = {
+  id?: string;
+  to_add?: unknown;
+  unknown?: unknown;
+  _new_rel_data?: unknown;
+};
+
+export type EditTreeWithRelativeAdd = {
+  isAddingRelative: () => boolean;
+  addRelativeInstance: { onCancel: (() => void) | null };
+};
+
+export type RelativeAddCardClickHandlers = {
+  onNewRelativeCardClick: (datum: ChartCardDatum) => void;
+  onToAddCardClick?: (datum: ChartCardDatum) => void;
+};
+
+/**
+ * Карточки-заглушки открывают внешнюю форму; обычные клики не вызывают family-chart EditTree form.
+ */
+export function wireFamilyChartCardClickForRelativeAdd(
+  editTree: EditTreeWithRelativeAdd,
+  card: CardClickHandlers,
+  handlers: RelativeAddCardClickHandlers,
+): void {
+  card.setOnCardClick((e, d) => {
+    if (isFamilyChartNonEditClick(e)) {
+      card.onCardClickDefault(e, d);
+      return;
+    }
+
+    const datum = (d as { data?: ChartCardDatum }).data;
+    if (!datum) {
+      card.onCardClickDefault(e, d);
+      return;
+    }
+
+    if (datum._new_rel_data) {
+      handlers.onNewRelativeCardClick(datum);
+      return;
+    }
+
+    if (datum.to_add && handlers.onToAddCardClick) {
+      handlers.onToAddCardClick(datum);
+      return;
+    }
+
+    if (datum.unknown) {
+      card.onCardClickDefault(e, d);
+      return;
+    }
+
+    if (editTree.isAddingRelative()) {
+      editTree.addRelativeInstance.onCancel?.();
+    }
+
+    card.onCardClickDefault(e, d);
+  });
   markCardClickGuardApplied(card);
 }
 

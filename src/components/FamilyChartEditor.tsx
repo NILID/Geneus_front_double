@@ -13,14 +13,25 @@ import RadioGroup from '@mui/material/RadioGroup';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { useAuth } from '../auth/AuthContext';
+import { canEditGenealogy } from '../auth/roles';
 import { saveFamilyTree, type FamilyChartData, type FamilyChartPerson } from '../familyChartApi';
 import {
   bindFamilyChartAuxiliaryClickIsolation,
-  wireFamilyChartCardClickForEdit,
+  wireFamilyChartCardClickForRelativeAdd,
+  type ChartCardDatum,
+  type EditTreeWithRelativeAdd,
 } from '../familyChartEdit/cardClick';
+import {
+  applyPersonNamesToChartDatum,
+  commitChartPersonCreation,
+  deactivateAddRelativeMode,
+  relTypeLabel,
+  type EditTreeAddBridge,
+} from '../familyChartEdit/commitNewRelative';
 import { diffPersonIds } from '../familyChartEdit/diffTree';
-import { RUSSIAN_EDIT_FIELDS, observeRussianFamilyChartUi } from '../familyChartEdit/familyChartRussianUi';
 import { formatFamilyChartPersonNameLine, formatFamilyChartYearLine } from '../lib/genealogyDateFormat';
+import { FamilyChartAddPersonDialog } from './FamilyChartAddPersonDialog';
 
 export type FamilyChartEditCallbacks = {
   /** Fires after any edit/add/remove that updates the library store (full snapshot). */
@@ -44,8 +55,6 @@ export type FamilyChartEditorProps = {
     meta: { addedChartNodeIds: string[]; focusMainNodeId: string | null },
   ) => void;
   cardDisplay?: CardDisplayConfig;
-  /** Поля формы: строки = id и label; или `{ id, label, type }` при русских подписях. */
-  editFields?: Array<string | { type: string; id: string; label: string }>;
   /** Bump to destroy and recreate the chart (e.g. after a server refetch). */
   remountKey?: string | number;
   /**
@@ -55,7 +64,10 @@ export type FamilyChartEditorProps = {
   onOpenPersonPage?: (personId: string) => void;
   /** Chart node `id` passed to {@link https://github.com/donatso/family-chart `updateMainId`} (корень древа). */
   mainNodeId: string;
-  /** Только просмотр: без редактирования древа и без сохранения на сервер. */
+  /**
+   * Только просмотр: без редактирования древа и без сохранения на сервер.
+   * Дополнительно к пропу действует {@link canEditGenealogy} (роли `user` не редактируют древо).
+   */
   readOnly?: boolean;
 } & FamilyChartEditCallbacks;
 
@@ -66,40 +78,33 @@ const DEFAULT_CARD_DISPLAY: CardDisplayConfig = [
   (d) => formatFamilyChartPersonNameLine(d),
   (d) => formatFamilyChartYearLine(d.data as Record<string, unknown>),
 ];
-const DEFAULT_EDIT_FIELDS = RUSSIAN_EDIT_FIELDS;
-
-type ChartFormDatum = {
-  id?: string;
-  to_add?: unknown;
-  unknown?: unknown;
+type AddPersonDialogState = {
+  chartNodeId: string;
+  relLabel: string;
 };
 
-/** editTree из family-chart: при добавлении родственника хранит новую персону в addRelativeInstance. */
-type EditTreeWithAddRelative = {
-  isAddingRelative: () => boolean;
-  addRelativeInstance: { datum: ChartFormDatum | null };
-};
+type EditTreeRuntime = EditTreeAddBridge &
+  EditTreeWithRelativeAdd & {
+    addRelative: (datum: ChartCardDatum & { rels?: Record<string, string[]> }) => unknown;
+    destroy: () => unknown;
+    exportData: () => FamilyChartData;
+  };
 
-function resolveFocusMainNodeIdOnSubmit(
-  datum: ChartFormDatum,
-  editTree: EditTreeWithAddRelative,
-  lastPersisted: FamilyChartData | null,
-): string | null {
-  if (editTree.isAddingRelative()) {
-    const active = editTree.addRelativeInstance.datum;
-    if (active?.id != null && active.id !== '') {
-      return String(active.id);
-    }
-  }
-  if (datum.id == null || datum.id === '') {
-    return null;
-  }
-  const nodeId = String(datum.id);
-  const wasPersisted = lastPersisted?.some((n) => n.id === nodeId) ?? false;
-  if (!wasPersisted || datum.to_add || datum.unknown) {
-    return nodeId;
-  }
-  return null;
+function hiddenFamilyChartFormCont(): {
+  el: HTMLDivElement;
+  populate: () => void;
+  open: () => void;
+  close: () => void;
+} {
+  const el = document.createElement('div');
+  el.setAttribute('aria-hidden', 'true');
+  el.style.display = 'none';
+  return {
+    el,
+    populate: () => {},
+    open: () => {},
+    close: () => {},
+  };
 }
 
 function newExternalChartNodeId(): string {
@@ -220,12 +225,15 @@ export function FamilyChartEditor({
   onAdd,
   onRemove,
   cardDisplay = DEFAULT_CARD_DISPLAY,
-  editFields = DEFAULT_EDIT_FIELDS,
   remountKey = 0,
   onOpenPersonPage,
   mainNodeId,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
 }: FamilyChartEditorProps) {
+  const { user } = useAuth();
+  /** Согласовано с `Ability` на бэке: `update_tree` только moderator/admin. */
+  const readOnly = readOnlyProp || !canEditGenealogy(user?.role);
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<
     | {
@@ -236,7 +244,7 @@ export function FamilyChartEditor({
     | undefined
   >(undefined);
   const appliedMainNodeIdRef = useRef<string | null>(null);
-  const editTreeRef = useRef<{ exportData: () => unknown; destroy: () => unknown } | null>(null);
+  const editTreeRef = useRef<EditTreeRuntime | null>(null);
   const lastExportRef = useRef<FamilyChartData | null>(null);
   /** Последний снимок, совпадающий с сервером; не обновляется при локальных правках до save. */
   const lastPersistedDataRef = useRef<FamilyChartData | null>(null);
@@ -255,6 +263,25 @@ export function FamilyChartEditor({
 
   const createdForKeyRef = useRef<string | number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [addDialog, setAddDialog] = useState<AddPersonDialogState | null>(null);
+  const addDialogRef = useRef<AddPersonDialogState | null>(null);
+  addDialogRef.current = addDialog;
+  const [addDialogError, setAddDialogError] = useState<string | null>(null);
+  const openAddDialogRef = useRef<(datum: ChartCardDatum) => void>(() => {});
+
+  const openAddPersonDialog = useCallback((datum: ChartCardDatum) => {
+    if (!datum.id) {
+      return;
+    }
+    const rel = datum._new_rel_data as { label?: string; rel_type?: string } | undefined;
+    const relLabel =
+      rel?.label ??
+      (rel?.rel_type ? relTypeLabel(rel.rel_type) : datum.to_add ? 'Родитель' : 'Родственник');
+    setAddDialogError(null);
+    setAddDialog({ chartNodeId: String(datum.id), relLabel });
+  }, []);
+
+  openAddDialogRef.current = openAddPersonDialog;
 
   const persistLatestTree = useCallback(async () => {
     const tree = editTreeRef.current;
@@ -301,6 +328,58 @@ export function FamilyChartEditor({
     }
   }, []);
 
+  const persistChartExport = useCallback(
+    async (focusNodeId: string | null) => {
+      const tree = editTreeRef.current;
+      if (!tree) {
+        return;
+      }
+      if (focusNodeId) {
+        focusMainNodeIdRef.current = focusNodeId;
+      }
+      await persistLatestTree();
+    },
+    [persistLatestTree],
+  );
+
+  const handleAddPersonDialogSubmit = useCallback(
+    async ({ firstName, lastName }: { firstName: string; lastName: string }) => {
+      const pending = addDialogRef.current;
+      const tree = editTreeRef.current;
+      const chart = chartRef.current;
+      if (!pending || !tree || !chart) {
+        return;
+      }
+
+      setAddDialogError(null);
+
+      try {
+        const datum = tree.store.getDatum(pending.chartNodeId);
+        if (!datum) {
+          throw new Error('Не найден узел древа для сохранения.');
+        }
+
+        applyPersonNamesToChartDatum(datum, firstName, lastName);
+        const committed = commitChartPersonCreation(tree, pending.chartNodeId);
+        if (!committed?.id) {
+          throw new Error('Не удалось подтвердить новую персону в древе.');
+        }
+
+        const newNodeId = String(committed.id);
+        deactivateAddRelativeMode(tree);
+        chart.updateMainId(newNodeId);
+        chart.updateTree({ tree_position: 'main_to_middle' });
+
+        // persistLatestTree сам выставляет isSavingRef; не делать это здесь — иначе save пропускается.
+        await persistChartExport(newNodeId);
+        setAddDialog(null);
+      } catch (err) {
+        setAddDialogError(err instanceof Error ? err.message : 'Не удалось сохранить');
+      }
+    },
+    [persistChartExport],
+  );
+
   const handleFirstPersonCreated = useCallback((saved: FamilyChartData) => {
     removedIdsRef.current = new Set();
     const prevPersisted = lastPersistedDataRef.current;
@@ -344,20 +423,52 @@ export function FamilyChartEditor({
     /** HTML cards default `mini_tree: false`; enable like SVG example — icon when `!all_rels_displayed`. */
     card.setMiniTree(true);
 
-    card.setOnCardUpdate(function (this: HTMLElement, d: { data: Record<string, unknown> & { id?: string; to_add?: unknown; unknown?: unknown; _new_rel_data?: unknown } }) {
-      const cardEl = this.querySelector('.card');
+    card.setOnCardUpdate(function (this: HTMLElement, d: { data: Record<string, unknown> & { id?: string; main?: boolean; to_add?: unknown; unknown?: unknown; _new_rel_data?: unknown } }) {
+      const cardHost = this;
+      const cardEl = cardHost.querySelector('.card');
       if (!cardEl) {
         return;
       }
       cardEl.querySelectorAll('.f3-person-profile-bar').forEach((n) => n.remove());
-
-      const open = onOpenPersonPageRef.current;
-      if (!open) {
-        return;
-      }
+      cardEl.querySelectorAll(':scope > .f3-geneus-add-relative-btn').forEach((n) => n.remove());
 
       const node = d.data;
       if (node.to_add || node.unknown || node._new_rel_data) {
+        return;
+      }
+
+      const isMainCard = Boolean(node.main);
+
+      if (!readOnly && isMainCard) {
+        const rawNodeId = node.id;
+        if (rawNodeId !== undefined && rawNodeId !== null && rawNodeId !== '') {
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.className = 'f3-geneus-add-relative-btn';
+          addBtn.setAttribute('aria-label', 'Добавить родственника');
+          addBtn.title = 'Добавить родственника';
+          addBtn.textContent = '+';
+          addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const et = editTreeRef.current;
+            if (!et) {
+              return;
+            }
+            const datum = et.store.getDatum(String(rawNodeId));
+            if (!datum) {
+              return;
+            }
+            if (et.addRelativeInstance.is_active) {
+              et.addRelativeInstance.onCancel?.();
+            }
+            et.addRelative(datum);
+          });
+          cardEl.insertBefore(addBtn, cardEl.firstChild);
+        }
+      }
+
+      const open = onOpenPersonPageRef.current;
+      if (!open) {
         return;
       }
 
@@ -397,28 +508,18 @@ export function FamilyChartEditor({
     if (!readOnly) {
       const editTree = chart
         .editTree()
-        .setAddRelLabels(
-          {
-            father: 'Отец',
-            mother: 'Мать',
-            spouse: 'Супруг(а)',
-            son: 'Сын',
-            daughter: 'Дочь',
-          }
-        )
-        .setFields(editFields)
-        .setPostSubmit((datum: ChartFormDatum) => {
-          focusMainNodeIdRef.current = resolveFocusMainNodeIdOnSubmit(
-            datum,
-            editTree as unknown as EditTreeWithAddRelative,
-            lastPersistedDataRef.current,
-          );
-          void persistLatestTree();
+        .setFormCont(hiddenFamilyChartFormCont())
+        .setAddRelLabels({
+          father: 'Отец',
+          mother: 'Мать',
+          spouse: 'Супруг(а)',
+          son: 'Сын',
+          daughter: 'Дочь',
         })
         .setOnChange(() => {
           const et = editTreeRef.current;
           if (!et) return;
-          const raw = et.exportData() as FamilyChartData;
+          const raw = et.exportData();
           const prev = lastExportRef.current;
           lastExportRef.current = raw;
           const { added, removed } = diffPersonIds(prev, raw);
@@ -433,11 +534,12 @@ export function FamilyChartEditor({
           if (removed.length) {
             callbacksRef.current.onRemove?.(raw, removed);
           }
-        })
-      wireFamilyChartCardClickForEdit(
-        editTree,
-        card as unknown as Parameters<typeof wireFamilyChartCardClickForEdit>[1],
-      );
+        }) as EditTreeRuntime;
+
+      wireFamilyChartCardClickForRelativeAdd(editTree, card as Parameters<typeof wireFamilyChartCardClickForRelativeAdd>[1], {
+        onNewRelativeCardClick: (datum) => openAddDialogRef.current(datum),
+        onToAddCardClick: (datum) => openAddDialogRef.current(datum),
+      });
 
       editTreeRef.current = editTree;
     } else {
@@ -448,8 +550,6 @@ export function FamilyChartEditor({
     lastExportRef.current = data;
     lastPersistedDataRef.current = data;
 
-    const stopRussianUi = observeRussianFamilyChartUi(el);
-
     // Корень древа: `mainNodeId` с родителя (например FamilyChartPage: URL ?main/?person → персона учётки → первый узел в JSON).
     chart.updateMainId(mainNodeIdRef.current).updateTree({ initial: true });
     appliedMainNodeIdRef.current = mainNodeIdRef.current;
@@ -457,7 +557,6 @@ export function FamilyChartEditor({
     internalChangeRef.current = true;
 
     return () => {
-      stopRussianUi();
       editTreeRef.current?.destroy();
       el.innerHTML = '';
       chartRef.current = undefined;
@@ -470,7 +569,7 @@ export function FamilyChartEditor({
       appliedMainNodeIdRef.current = null;
     };
     // mainNodeIdRef всегда актуален; смена только корня без пересоздания графа — отдельный эффект ниже.
-  }, [data, remountKey, cardDisplay, editFields, persistLatestTree, readOnly]);
+  }, [data, remountKey, cardDisplay, persistLatestTree, readOnly]);
 
   useEffect(() => {
     if (!chartRef.current) {
@@ -551,17 +650,34 @@ export function FamilyChartEditor({
   }
 
   return (
-    <Box
-      className="f3 chart-container"
-      id="FamilyChart"
-      ref={containerRef}
-      data-testid="family-chart-root"
-      aria-busy={isSaving}
-      sx={{
-        ...chartAreaSx,
-        // family-chart: скрыть «Удалить связь» в форме карточки (режим remove-relative путает и обходит явное сохранение).
-        '& .f3-remove-relative-btn': { display: 'none' },
-      }}
-    />
+    <>
+      <Box
+        className="f3 chart-container"
+        id="FamilyChart"
+        ref={containerRef}
+        data-testid="family-chart-root"
+        aria-busy={isSaving}
+        sx={{
+          ...chartAreaSx,
+          '& .f3-form-cont': { display: 'none !important' },
+          '& .f3-remove-relative-btn': { display: 'none' },
+        }}
+      />
+      {!readOnly && (
+        <FamilyChartAddPersonDialog
+          open={addDialog != null}
+          relLabel={addDialog?.relLabel ?? ''}
+          onClose={() => {
+            if (!isSaving) {
+              setAddDialog(null);
+              setAddDialogError(null);
+            }
+          }}
+          onSubmit={(values) => void handleAddPersonDialogSubmit(values)}
+          submitting={isSaving && addDialog != null}
+          error={addDialogError}
+        />
+      )}
+    </>
   );
 }
