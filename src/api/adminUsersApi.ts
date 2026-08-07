@@ -7,6 +7,7 @@ export type AdminUserRow = {
   email: string;
   role: UserRole;
   person_id: number | null;
+  last_sign_in_at: string | null;
 };
 
 function headers(): Headers {
@@ -41,6 +42,29 @@ async function parseErrorMessage(res: Response): Promise<string> {
   return `${res.status} ${res.statusText}`;
 }
 
+function parseAdminUserRow(row: unknown): AdminUserRow {
+  if (!row || typeof row !== 'object') {
+    throw new Error('Некорректный ответ сервера');
+  }
+  const r = row as Record<string, unknown>;
+  const pid = r.person_id;
+  let person_id: number | null = null;
+  if (pid !== null && pid !== undefined && pid !== '') {
+    const n = Number(pid);
+    person_id = Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const rawLast = r.last_sign_in_at;
+  const last_sign_in_at =
+    typeof rawLast === 'string' && rawLast.trim() !== '' ? rawLast : null;
+  return {
+    id: Number(r.id),
+    email: String(r.email),
+    role: parseUserRole(r.role),
+    person_id,
+    last_sign_in_at,
+  };
+}
+
 export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   const res = await fetch(`${API_BASE}/api/v1/admin/users`, { headers: headers() });
   if (!res.ok) {
@@ -54,21 +78,7 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   if (!Array.isArray(users)) {
     throw new Error('Некорректный ответ сервера');
   }
-  return users.map((row) => {
-    const r = row as Record<string, unknown>;
-    const pid = r.person_id;
-    let person_id: number | null = null;
-    if (pid !== null && pid !== undefined && pid !== '') {
-      const n = Number(pid);
-      person_id = Number.isFinite(n) && n > 0 ? n : null;
-    }
-    return {
-      id: Number(r.id),
-      email: String(r.email),
-      role: parseUserRole(r.role),
-      person_id,
-    };
-  });
+  return users.map(parseAdminUserRow);
 }
 
 export async function patchAdminUserRole(userId: number, role: UserRole): Promise<AdminUserRow> {
@@ -85,20 +95,5 @@ export async function patchAdminUserRole(userId: number, role: UserRole): Promis
     throw new Error('Некорректный ответ сервера');
   }
   const u = (data as { user?: unknown }).user;
-  if (!u || typeof u !== 'object') {
-    throw new Error('Некорректный ответ сервера');
-  }
-  const r = u as Record<string, unknown>;
-  const pid = r.person_id;
-  let person_id: number | null = null;
-  if (pid !== null && pid !== undefined && pid !== '') {
-    const n = Number(pid);
-    person_id = Number.isFinite(n) && n > 0 ? n : null;
-  }
-  return {
-    id: Number(r.id),
-    email: String(r.email),
-    role: parseUserRole(r.role),
-    person_id,
-  };
+  return parseAdminUserRow(u);
 }

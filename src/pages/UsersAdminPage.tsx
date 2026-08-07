@@ -30,6 +30,20 @@ const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Администратор',
 };
 
+function formatLastSeen(iso: string | null): string {
+  if (!iso) {
+    return 'Никогда';
+  }
+  try {
+    return new Date(iso).toLocaleString('ru-RU', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export function UsersAdminPage() {
   const { user, refreshUser } = useAuth();
   const [rows, setRows] = useState<AdminUserRow[]>([]);
@@ -100,7 +114,7 @@ export function UsersAdminPage() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 3 }}>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
       <Stack spacing={2}>
         <Typography variant="h1" component="h1" sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' }, fontWeight: 700 }}>
           Пользователи
@@ -122,6 +136,7 @@ export function UsersAdminPage() {
                 <TableCell>Email</TableCell>
                 <TableCell>Персона</TableCell>
                 <TableCell>Роль</TableCell>
+                <TableCell>Был на сайте</TableCell>
                 <TableCell align="right">Действия</TableCell>
               </TableRow>
             </TableHead>
@@ -131,6 +146,7 @@ export function UsersAdminPage() {
                   <TableCell>{row.email}</TableCell>
                   <TableCell>{row.person_id != null ? `#${row.person_id}` : '—'}</TableCell>
                   <TableCell>{ROLE_LABELS[row.role]}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatLastSeen(row.last_sign_in_at)}</TableCell>
                   <TableCell align="right">
                     <Button size="small" variant="outlined" onClick={() => openModal(row)}>
                       Изменить роль
