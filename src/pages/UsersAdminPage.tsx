@@ -146,7 +146,7 @@ export function UsersAdminPage() {
                   <TableCell>{row.email}</TableCell>
                   <TableCell>{row.person_id != null ? `#${row.person_id}` : '—'}</TableCell>
                   <TableCell>{ROLE_LABELS[row.role]}</TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatLastSeen(row.last_sign_in_at)}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatLastSeen(row.last_seen_at)}</TableCell>
                   <TableCell align="right">
                     <Button size="small" variant="outlined" onClick={() => openModal(row)}>
                       Изменить роль

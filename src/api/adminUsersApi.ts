@@ -7,7 +7,7 @@ export type AdminUserRow = {
   email: string;
   role: UserRole;
   person_id: number | null;
-  last_sign_in_at: string | null;
+  last_seen_at: string | null;
 };
 
 function headers(): Headers {
@@ -53,15 +53,15 @@ function parseAdminUserRow(row: unknown): AdminUserRow {
     const n = Number(pid);
     person_id = Number.isFinite(n) && n > 0 ? n : null;
   }
-  const rawLast = r.last_sign_in_at;
-  const last_sign_in_at =
+  const rawLast = r.last_seen_at;
+  const last_seen_at =
     typeof rawLast === 'string' && rawLast.trim() !== '' ? rawLast : null;
   return {
     id: Number(r.id),
     email: String(r.email),
     role: parseUserRole(r.role),
     person_id,
-    last_sign_in_at,
+    last_seen_at,
   };
 }
 
