@@ -54,12 +54,11 @@ export function AdminDigestPage() {
         <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack spacing={1.5}>
             <Typography variant="body1">
-              Письмо уходит всем администраторам: обновления за последний месяц (новые и изменённые персоны с
-              диффом полей, фото, отметки на снимках, факты) и дни рождения живых родственников на месяц вперёд.
+              Кнопка ниже отправит дайджест только вам: обновления за последний месяц и дни рождения на месяц
+              вперёд. Пустые разделы в письме скрываются, сводка с цифрами остаётся сверху.
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Та же рассылка выполняется по cron каждый час — пока для проверки доставки. Кнопка ниже шлёт полный
-              дайджест сразу, не дожидаясь часа.
+              Всем зарегистрированным пользователям то же письмо уходит автоматически 1-го числа каждого месяца.
             </Typography>
             <Stack direction="row" sx={{ pt: 1 }}>
               <Button variant="contained" onClick={() => setConfirmOpen(true)} disabled={sending}>
@@ -89,7 +88,7 @@ export function AdminDigestPage() {
         <DialogTitle>Отправить дайджест?</DialogTitle>
         <DialogContent>
           <Typography variant="body2">
-            Письмо получат все администраторы — как при ежечасной cron-рассылке.
+            Письмо придёт только на ваш адрес, остальные пользователи его не получат.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
