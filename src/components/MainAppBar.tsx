@@ -26,7 +26,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { AccountSettingsForm } from './AccountSettingsForm';
 import { NavSectionIcon } from './NavSectionIcon';
 import { useAuth } from '../auth/AuthContext';
-import { canAccessAudit, canManageUsers } from '../auth/roles';
+import { canAccessAudit, canManageUsers, canSendAdminDigest } from '../auth/roles';
 import { ADMIN_MENU_ICON, MAIN_NAV_SECTIONS } from '../navigation/mainNavSections';
 
 type AdminNavItem = {
@@ -57,6 +57,9 @@ export function MainAppBar() {
     const items: AdminNavItem[] = [];
     if (canManageUsers(user?.role)) {
       items.push({ to: '/admin/users', label: 'Пользователи' });
+    }
+    if (canSendAdminDigest(user?.role)) {
+      items.push({ to: '/admin/digest', label: 'Дайджест' });
     }
     if (canAccessAudit(user?.role)) {
       items.push({ to: '/audit', label: 'Аудит' });

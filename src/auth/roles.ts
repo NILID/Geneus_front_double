@@ -20,6 +20,10 @@ export function canManageUsers(role: UserRole | undefined): boolean {
   return role === 'admin';
 }
 
+export function canSendAdminDigest(role: UserRole | undefined): boolean {
+  return role === 'admin';
+}
+
 /** Удаление идей — только администратор */
 export function canDeleteIdeas(role: UserRole | undefined): boolean {
   return role === 'admin';

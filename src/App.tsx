@@ -20,6 +20,7 @@ import { IdeasPage } from './pages/IdeasPage';
 import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { UsersAdminPage } from './pages/UsersAdminPage';
+import { AdminDigestPage } from './pages/AdminDigestPage';
 import { SessionLoading } from './components/SessionLoading';
 import { GuestAuthLayout } from './components/GuestAuthLayout';
 
@@ -173,6 +174,18 @@ function AppRoutes() {
             <AdminRoute>
               <AuthenticatedLayout>
                 <UsersAdminPage />
+              </AuthenticatedLayout>
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/digest"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AuthenticatedLayout>
+                <AdminDigestPage />
               </AuthenticatedLayout>
             </AdminRoute>
           </ProtectedRoute>

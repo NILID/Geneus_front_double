@@ -3,6 +3,7 @@ import {
   canDeleteIdeas,
   canEditGenealogy,
   canManageUsers,
+  canSendAdminDigest,
   canSendInvitations,
 } from './roles';
 
@@ -22,6 +23,8 @@ describe('other role helpers', () => {
   it('scopes admin-only actions', () => {
     expect(canManageUsers('admin')).toBe(true);
     expect(canManageUsers('moderator')).toBe(false);
+    expect(canSendAdminDigest('admin')).toBe(true);
+    expect(canSendAdminDigest('moderator')).toBe(false);
     expect(canAccessAudit('admin')).toBe(true);
     expect(canDeleteIdeas('admin')).toBe(true);
     expect(canDeleteIdeas('moderator')).toBe(false);
