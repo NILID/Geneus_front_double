@@ -116,6 +116,11 @@ export interface GalleryPhotoMasonryProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
+  /** Фото для полноэкранного просмотра; по умолчанию те же, что в сетке */
+  viewerPhotos?: GalleryMasonryItem[];
+  /** Контролируемое открытие снимка (например /media/:id) */
+  openPhotoId?: number | null;
+  onOpenPhotoIdChange?: (photoId: number | null) => void;
   sx?: SxProps<Theme>;
 }
 
@@ -133,12 +138,21 @@ export function GalleryPhotoMasonry({
   onLoadMore,
   hasMore = false,
   loadingMore = false,
+  viewerPhotos,
+  openPhotoId = null,
+  onOpenPhotoIdChange,
   sx,
 }: GalleryPhotoMasonryProps) {
   const reactId = useId();
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const modalPhotos = viewerPhotos ?? photos;
+  const isControlled = typeof onOpenPhotoIdChange === 'function';
+  const derivedIndex =
+    isControlled && openPhotoId != null ? modalPhotos.findIndex((p) => p.id === openPhotoId) : -1;
+  const modalOpen = isControlled ? derivedIndex >= 0 : viewerOpen;
+  const modalIndex = isControlled && derivedIndex >= 0 ? derivedIndex : viewerIndex;
 
   useEffect(() => {
     if (!onLoadMore || !hasMore || loadingMore) {
@@ -160,7 +174,7 @@ export function GalleryPhotoMasonry({
     return () => observer.disconnect();
   }, [onLoadMore, hasMore, loadingMore]);
 
-  if (photos.length === 0) {
+  if (photos.length === 0 && !modalOpen) {
     return null;
   }
 
@@ -169,15 +183,31 @@ export function GalleryPhotoMasonry({
   return (
     <Box sx={sx}>
       <GalleryPhotoViewerModal
-        open={viewerOpen}
-        onClose={() => setViewerOpen(false)}
-        photos={photos}
-        index={viewerIndex}
-        onIndexChange={setViewerIndex}
+        open={modalOpen}
+        onClose={() => {
+          if (onOpenPhotoIdChange) {
+            onOpenPhotoIdChange(null);
+          } else {
+            setViewerOpen(false);
+          }
+        }}
+        photos={modalPhotos}
+        index={modalIndex}
+        onIndexChange={(nextIndex) => {
+          if (onOpenPhotoIdChange) {
+            const next = modalPhotos[nextIndex];
+            if (next) {
+              onOpenPhotoIdChange(next.id);
+            }
+          } else {
+            setViewerIndex(nextIndex);
+          }
+        }}
         currentUserId={currentUserId}
         onCommentsCountChange={onGalleryPhotoCommentsCountChange}
       />
       {title}
+      {photos.length > 0 ? (
       <ImageList variant="masonry" cols={cols} gap={gap} sx={{ width: '100%', mb: 0 }}>
         {photos.map((item, photoIndex) => {
           const tagged = item.tagged_people ?? [];
@@ -214,8 +244,12 @@ export function GalleryPhotoMasonry({
                   component="button"
                   type="button"
                   onClick={() => {
-                    setViewerIndex(photoIndex);
-                    setViewerOpen(true);
+                    if (onOpenPhotoIdChange) {
+                      onOpenPhotoIdChange(item.id);
+                    } else {
+                      setViewerIndex(photoIndex);
+                      setViewerOpen(true);
+                    }
                   }}
                   aria-label="Открыть фото"
                   sx={{
@@ -262,6 +296,7 @@ export function GalleryPhotoMasonry({
           );
         })}
       </ImageList>
+      ) : null}
       {onLoadMore && hasMore ? (
         <Box
           ref={loadMoreSentinelRef}

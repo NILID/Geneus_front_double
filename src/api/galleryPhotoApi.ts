@@ -131,6 +131,25 @@ export async function fetchGalleryPhotosPage(
   };
 }
 
+export async function fetchGalleryPhoto(id: number): Promise<GalleryPhoto> {
+  const res = await fetch(`${API_BASE}/api/v1/gallery_photos/${id}`, {
+    ...NO_STORE,
+    headers: authHeaders(false),
+  });
+  if (res.status === 404) {
+    throw new Error('Фото не найдено');
+  }
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
+  }
+  const json: unknown = await res.json();
+  const photo = (json as { gallery_photo?: GalleryPhoto }).gallery_photo;
+  if (!photo) {
+    throw new Error('Некорректный ответ сервера');
+  }
+  return normalizeGalleryPhoto(photo);
+}
+
 /** Первая страница с увеличенным лимитом (например, превью на главной). */
 export async function fetchGalleryPhotos(perPage?: number): Promise<GalleryPhoto[]> {
   const { photos } = await fetchGalleryPhotosPage(1, perPage ?? GALLERY_PHOTOS_PAGE_SIZE);

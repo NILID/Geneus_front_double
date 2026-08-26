@@ -16,8 +16,10 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   deleteGalleryPhoto,
+  fetchGalleryPhoto,
   fetchGalleryPhotosPage,
   GALLERY_PHOTOS_PAGE_SIZE,
   updateGalleryPhoto,
@@ -35,6 +37,21 @@ import type { GalleryPersonTagInput } from '../gallery/galleryPhotoRegion';
 
 type YearFilterValue = 'all' | 'none' | number;
 
+function parseMediaPhotoId(raw: string | undefined): number | null {
+  if (!raw) {
+    return null;
+  }
+  if (!/^\d+$/.test(raw)) {
+    return null;
+  }
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+function mediaPath(photoId?: number | null): string {
+  return photoId != null ? `/media/${photoId}` : '/media';
+}
+
 function distinctTakenYears(photos: GalleryPhoto[]): number[] {
   const set = new Set<number>();
   for (const p of photos) {
@@ -47,6 +64,10 @@ function distinctTakenYears(photos: GalleryPhoto[]): number[] {
 
 export function MediaPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { photoId: photoIdParam } = useParams<{ photoId?: string }>();
+  const openPhotoId = parseMediaPhotoId(photoIdParam);
+  const invalidPhotoParam = Boolean(photoIdParam) && openPhotoId == null;
   const canEdit = canEditGenealogy(user?.role);
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
@@ -75,6 +96,8 @@ export function MediaPage() {
   const [tagSaving, setTagSaving] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
   const [yearFilter, setYearFilter] = useState<YearFilterValue>('all');
+  const [linkedPhoto, setLinkedPhoto] = useState<GalleryPhoto | null>(null);
+  const [linkedError, setLinkedError] = useState<string | null>(null);
 
   const takenYearsInGallery = useMemo(() => distinctTakenYears(photos), [photos]);
   const hasPhotosWithoutYear = useMemo(() => photos.some((p) => p.taken_year == null), [photos]);
@@ -88,6 +111,49 @@ export function MediaPage() {
     }
     return photos.filter((p) => p.taken_year === yearFilter);
   }, [photos, yearFilter]);
+
+  const viewerPhotos = useMemo(() => {
+    if (!linkedPhoto) {
+      return filteredPhotos;
+    }
+    if (filteredPhotos.some((p) => p.id === linkedPhoto.id)) {
+      return filteredPhotos;
+    }
+    return [linkedPhoto, ...filteredPhotos];
+  }, [filteredPhotos, linkedPhoto]);
+
+  useEffect(() => {
+    if (openPhotoId == null) {
+      setLinkedPhoto(null);
+      setLinkedError(invalidPhotoParam ? 'Фото не найдено' : null);
+      return;
+    }
+
+    let cancelled = false;
+    setLinkedError(null);
+    fetchGalleryPhoto(openPhotoId)
+      .then((photo) => {
+        if (!cancelled) {
+          setLinkedPhoto(photo);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setLinkedPhoto(null);
+          setLinkedError(e instanceof Error ? e.message : 'Фото не найдено');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openPhotoId, invalidPhotoParam]);
+
+  const handleOpenPhotoIdChange = useCallback(
+    (photoId: number | null) => {
+      navigate(mediaPath(photoId), { replace: true });
+    },
+    [navigate],
+  );
 
   useEffect(() => {
     if (yearFilter === 'none' && !hasPhotosWithoutYear) {
@@ -221,6 +287,9 @@ export function MediaPage() {
     try {
       await deleteGalleryPhoto(id);
       setPhotos((prev) => prev.filter((p) => p.id !== id));
+      if (openPhotoId === id) {
+        navigate(mediaPath(null), { replace: true });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Не удалось удалить');
     }
@@ -354,8 +423,13 @@ export function MediaPage() {
             {error}
           </Alert>
         )}
+        {linkedError && (
+          <Alert severity="error" role="alert">
+            {linkedError}
+          </Alert>
+        )}
 
-        {!loading && photos.length === 0 && !error && (
+        {!loading && photos.length === 0 && !error && !linkedPhoto && (
           <Typography color="text.secondary" align="center">
             {canEdit ? 'Пока нет фотографий — загрузите первую.' : 'Пока нет фотографий.'}
           </Typography>
@@ -402,6 +476,9 @@ export function MediaPage() {
 
         <GalleryPhotoMasonry
           photos={filteredPhotos}
+          viewerPhotos={viewerPhotos}
+          openPhotoId={linkedError ? null : openPhotoId}
+          onOpenPhotoIdChange={handleOpenPhotoIdChange}
           cols={galleryCols}
           gap={12}
           sx={{ width: '100%' }}
@@ -413,6 +490,9 @@ export function MediaPage() {
           onGalleryPhotoCommentsCountChange={(photoId, commentsCount) => {
             setPhotos((prev) =>
               prev.map((p) => (p.id === photoId ? { ...p, comments_count: commentsCount } : p)),
+            );
+            setLinkedPhoto((prev) =>
+              prev && prev.id === photoId ? { ...prev, comments_count: commentsCount } : prev,
             );
           }}
           onEdit={

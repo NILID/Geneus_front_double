@@ -128,7 +128,7 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/media"
+        path="/media/:photoId?"
         element={
           <ProtectedRoute>
             <AuthenticatedLayout>

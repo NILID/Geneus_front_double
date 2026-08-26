@@ -48,7 +48,7 @@ export function MainAppBar() {
     () =>
       MAIN_NAV_SECTIONS.map((section) => ({
         ...section,
-        active: pathname === section.to,
+        active: pathname === section.to || pathname.startsWith(`${section.to}/`),
       })),
     [pathname],
   );
