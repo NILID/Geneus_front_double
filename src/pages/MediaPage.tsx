@@ -25,6 +25,7 @@ import {
   uploadGalleryPhoto,
   type GalleryPhoto,
   type GalleryPhotosPaginationMeta,
+  type GalleryTakenYearFilter,
 } from '../api/galleryPhotoApi';
 import { useAuth } from '../auth/AuthContext';
 import { canEditGenealogy } from '../auth/roles';
@@ -33,8 +34,6 @@ import { GalleryPhotoTagPeopleDialog } from '../components/GalleryPhotoTagPeople
 import { SessionLoading } from '../components/SessionLoading';
 import { chartPersonLinkSelectOptions, fetchFamilyChart, type ChartPersonOption } from '../familyChartApi';
 import type { GalleryPersonTagInput } from '../gallery/galleryPhotoRegion';
-
-type YearFilterValue = 'all' | 'none' | number;
 
 function parseMediaPhotoId(raw: string | undefined): number | null {
   if (!raw) {
@@ -49,16 +48,6 @@ function parseMediaPhotoId(raw: string | undefined): number | null {
 
 function mediaPath(photoId?: number | null): string {
   return photoId != null ? `/media/${photoId}` : '/media';
-}
-
-function distinctTakenYears(photos: GalleryPhoto[]): number[] {
-  const set = new Set<number>();
-  for (const p of photos) {
-    if (p.taken_year != null && !Number.isNaN(p.taken_year)) {
-      set.add(p.taken_year);
-    }
-  }
-  return Array.from(set).sort((a, b) => b - a);
 }
 
 export function MediaPage() {
@@ -91,32 +80,23 @@ export function MediaPage() {
   const [tagPhoto, setTagPhoto] = useState<GalleryPhoto | null>(null);
   const [tagSaving, setTagSaving] = useState(false);
   const [tagError, setTagError] = useState<string | null>(null);
-  const [yearFilter, setYearFilter] = useState<YearFilterValue>('all');
+  const [yearFilter, setYearFilter] = useState<GalleryTakenYearFilter>('all');
   const [linkedPhoto, setLinkedPhoto] = useState<GalleryPhoto | null>(null);
   const [linkedError, setLinkedError] = useState<string | null>(null);
 
-  const takenYearsInGallery = useMemo(() => distinctTakenYears(photos), [photos]);
-  const hasPhotosWithoutYear = useMemo(() => photos.some((p) => p.taken_year == null), [photos]);
-
-  const filteredPhotos = useMemo(() => {
-    if (yearFilter === 'all') {
-      return photos;
-    }
-    if (yearFilter === 'none') {
-      return photos.filter((p) => p.taken_year == null);
-    }
-    return photos.filter((p) => p.taken_year === yearFilter);
-  }, [photos, yearFilter]);
+  const takenYearsInGallery = galleryMeta?.taken_years ?? [];
+  const hasPhotosWithoutYear = galleryMeta?.has_photos_without_taken_year ?? false;
+  const showYearFilter = takenYearsInGallery.length > 0 || hasPhotosWithoutYear;
 
   const viewerPhotos = useMemo(() => {
     if (!linkedPhoto) {
-      return filteredPhotos;
+      return photos;
     }
-    if (filteredPhotos.some((p) => p.id === linkedPhoto.id)) {
-      return filteredPhotos;
+    if (photos.some((p) => p.id === linkedPhoto.id)) {
+      return photos;
     }
-    return [linkedPhoto, ...filteredPhotos];
-  }, [filteredPhotos, linkedPhoto]);
+    return [linkedPhoto, ...photos];
+  }, [photos, linkedPhoto]);
 
   useEffect(() => {
     if (openPhotoId == null) {
@@ -152,17 +132,20 @@ export function MediaPage() {
   );
 
   useEffect(() => {
-    if (yearFilter === 'none' && !hasPhotosWithoutYear) {
+    if (!galleryMeta) {
+      return;
+    }
+    if (yearFilter === 'none' && !galleryMeta.has_photos_without_taken_year) {
       setYearFilter('all');
     }
-    if (typeof yearFilter === 'number' && !takenYearsInGallery.includes(yearFilter)) {
+    if (typeof yearFilter === 'number' && !galleryMeta.taken_years.includes(yearFilter)) {
       setYearFilter('all');
     }
-  }, [yearFilter, hasPhotosWithoutYear, takenYearsInGallery]);
+  }, [yearFilter, galleryMeta]);
 
   const load = useCallback(() => {
     setError(null);
-    return fetchGalleryPhotosPage(1, GALLERY_PHOTOS_PAGE_SIZE)
+    return fetchGalleryPhotosPage(1, GALLERY_PHOTOS_PAGE_SIZE, yearFilter)
       .then(({ photos: list, meta }) => {
         setPhotos(list);
         setGalleryMeta(meta);
@@ -170,7 +153,7 @@ export function MediaPage() {
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : 'Не удалось загрузить галерею');
       });
-  }, []);
+  }, [yearFilter]);
 
   const loadMore = useCallback(() => {
     if (loadingMore || loading || !galleryMeta || galleryMeta.page >= galleryMeta.total_pages) {
@@ -178,7 +161,7 @@ export function MediaPage() {
     }
     setLoadingMore(true);
     setError(null);
-    fetchGalleryPhotosPage(galleryMeta.page + 1, GALLERY_PHOTOS_PAGE_SIZE)
+    fetchGalleryPhotosPage(galleryMeta.page + 1, GALLERY_PHOTOS_PAGE_SIZE, yearFilter)
       .then(({ photos: list, meta }) => {
         setGalleryMeta(meta);
         setPhotos((prev) => {
@@ -191,7 +174,7 @@ export function MediaPage() {
         setError(e instanceof Error ? e.message : 'Не удалось загрузить фотографии');
       })
       .finally(() => setLoadingMore(false));
-  }, [galleryMeta, loading, loadingMore]);
+  }, [galleryMeta, loading, loadingMore, yearFilter]);
 
   const hasMoreGalleryPhotos =
     galleryMeta != null && galleryMeta.page < galleryMeta.total_pages;
@@ -217,7 +200,7 @@ export function MediaPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchGalleryPhotosPage(1, GALLERY_PHOTOS_PAGE_SIZE)
+    fetchGalleryPhotosPage(1, GALLERY_PHOTOS_PAGE_SIZE, yearFilter)
       .then(({ photos: list, meta }) => {
         if (!cancelled) {
           setPhotos(list);
@@ -237,7 +220,7 @@ export function MediaPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [yearFilter]);
 
   async function handleFilesSelected(files: FileList | null) {
     if (!files?.length) {
@@ -282,10 +265,10 @@ export function MediaPage() {
     setError(null);
     try {
       await deleteGalleryPhoto(id);
-      setPhotos((prev) => prev.filter((p) => p.id !== id));
       if (openPhotoId === id) {
         navigate(mediaPath(null), { replace: true });
       }
+      await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Не удалось удалить');
     }
@@ -431,7 +414,7 @@ export function MediaPage() {
           </Typography>
         )}
 
-        {!loading && photos.length > 0 && !error && (
+        {!loading && showYearFilter && !error && (
           <Paper elevation={1} sx={{ p: 1.5, maxWidth: 360, mx: 'auto' }}>
             <FormControl fullWidth size="small">
               <InputLabel id="media-year-filter-label">Год съёмки</InputLabel>
@@ -452,8 +435,8 @@ export function MediaPage() {
                   }
                 }}
               >
-                <MenuItem value="all">Все годы</MenuItem>
-                {hasPhotosWithoutYear && <MenuItem value="none">Год не указан</MenuItem>}
+                <MenuItem value="all">Все</MenuItem>
+                {hasPhotosWithoutYear ? <MenuItem value="none">Не указан</MenuItem> : null}
                 {takenYearsInGallery.map((y) => (
                   <MenuItem key={y} value={String(y)}>
                     {y}
@@ -464,14 +447,14 @@ export function MediaPage() {
           </Paper>
         )}
 
-        {!loading && photos.length > 0 && filteredPhotos.length === 0 && !error && (
+        {!loading && yearFilter !== 'all' && photos.length === 0 && !error && (
           <Typography color="text.secondary" align="center">
             Нет фотографий, подходящих под выбранный фильтр.
           </Typography>
         )}
 
         <GalleryPhotoMasonry
-          photos={filteredPhotos}
+          photos={photos}
           viewerPhotos={viewerPhotos}
           openPhotoId={linkedError ? null : openPhotoId}
           onOpenPhotoIdChange={handleOpenPhotoIdChange}

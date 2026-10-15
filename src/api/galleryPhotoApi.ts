@@ -47,7 +47,12 @@ export interface GalleryPhotosPaginationMeta {
   per_page: number;
   total_count: number;
   total_pages: number;
+  /** Все годы съёмки в галерее (для фильтра), по убыванию */
+  taken_years: number[];
+  has_photos_without_taken_year: boolean;
 }
+
+export type GalleryTakenYearFilter = 'all' | 'none' | number;
 
 export interface GalleryPhotosPageResult {
   photos: GalleryPhoto[];
@@ -91,6 +96,30 @@ async function parseErrorMessage(res: Response): Promise<string> {
   return `${res.status} ${res.statusText}`;
 }
 
+function normalizeTakenYearValue(raw: unknown): number | null {
+  if (raw == null || raw === '') {
+    return null;
+  }
+  if (typeof raw === 'number' && !Number.isNaN(raw)) {
+    return raw;
+  }
+  if (typeof raw === 'string') {
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function normalizeTakenYearsList(raw: unknown): number[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const years = raw
+    .map((y) => normalizeTakenYearValue(y))
+    .filter((y): y is number => y != null);
+  return Array.from(new Set(years)).sort((a, b) => b - a);
+}
+
 function normalizeGalleryPhotosMeta(raw: unknown): GalleryPhotosPaginationMeta {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const page = Number(o.page);
@@ -102,16 +131,33 @@ function normalizeGalleryPhotosMeta(raw: unknown): GalleryPhotosPaginationMeta {
     per_page: Number.isFinite(perPage) && perPage > 0 ? perPage : GALLERY_PHOTOS_PAGE_SIZE,
     total_count: Number.isFinite(totalCount) && totalCount >= 0 ? totalCount : 0,
     total_pages: Number.isFinite(totalPages) && totalPages >= 0 ? totalPages : 0,
+    taken_years: normalizeTakenYearsList(o.taken_years),
+    has_photos_without_taken_year: Boolean(o.has_photos_without_taken_year),
   };
+}
+
+function takenYearFilterQueryParam(filter: GalleryTakenYearFilter): string | undefined {
+  if (filter === 'all') {
+    return undefined;
+  }
+  if (filter === 'none') {
+    return 'none';
+  }
+  return String(filter);
 }
 
 export async function fetchGalleryPhotosPage(
   page = 1,
   perPage = GALLERY_PHOTOS_PAGE_SIZE,
+  takenYearFilter: GalleryTakenYearFilter = 'all',
 ): Promise<GalleryPhotosPageResult> {
   const sp = new URLSearchParams();
   sp.set('page', String(page));
   sp.set('per_page', String(perPage));
+  const takenYearParam = takenYearFilterQueryParam(takenYearFilter);
+  if (takenYearParam != null) {
+    sp.set('taken_year', takenYearParam);
+  }
   const res = await fetch(`${API_BASE}/api/v1/gallery_photos?${sp}`, {
     ...NO_STORE,
     headers: authHeaders(false),
@@ -164,13 +210,12 @@ function normalizeTaggedPerson(p: GalleryTaggedPerson): GalleryTaggedPerson {
 }
 
 export function normalizeGalleryPhoto(p: GalleryPhoto): GalleryPhoto {
-  const ty = p.taken_year;
   const cc = p.comments_count;
   return {
     ...p,
     user_id: typeof p.user_id === 'number' ? p.user_id : 0,
     uploaded_by_email: p.uploaded_by_email ?? null,
-    taken_year: typeof ty === 'number' && !Number.isNaN(ty) ? ty : null,
+    taken_year: normalizeTakenYearValue(p.taken_year),
     tagged_people: Array.isArray(p.tagged_people)
       ? p.tagged_people.map((t) => normalizeTaggedPerson(t as GalleryTaggedPerson))
       : [],
