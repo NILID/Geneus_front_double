@@ -30,25 +30,14 @@ export function GalleryPhotoPolaroidCard({
 
   return (
     <Box
-      component={onClick ? 'button' : 'div'}
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      aria-label={onClick ? 'Открыть фото' : undefined}
       sx={{
         position: 'relative',
         display: 'block',
         width: '100%',
         aspectRatio: '1 / 1',
-        p: 0,
-        m: 0,
-        border: 0,
         borderRadius: 1,
         overflow: 'hidden',
-        cursor: onClick ? 'pointer' : 'default',
         bgcolor: (t) => (t.palette.mode === 'dark' ? 'grey.900' : 'grey.300'),
-        color: 'inherit',
-        font: 'inherit',
-        textAlign: 'left',
         lineHeight: 0,
       }}
     >
@@ -68,6 +57,30 @@ export function GalleryPhotoPolaroidCard({
           }}
         />
       ) : null}
+      {onClick ? (
+        <Box
+          component="button"
+          type="button"
+          onClick={onClick}
+          aria-label="Открыть фото"
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            p: 0,
+            m: 0,
+            border: 0,
+            bgcolor: 'transparent',
+            cursor: 'pointer',
+            color: 'inherit',
+            font: 'inherit',
+            '&:focus-visible': {
+              outline: '2px solid',
+              outlineColor: 'primary.main',
+              outlineOffset: -2,
+            },
+          }}
+        />
+      ) : null}
       {hasMeta ? (
         <Box
           sx={{
@@ -75,6 +88,7 @@ export function GalleryPhotoPolaroidCard({
             left: 0,
             right: 0,
             bottom: 0,
+            zIndex: 1,
             display: 'flex',
             alignItems: 'flex-end',
             gap: 0.5,
@@ -83,6 +97,8 @@ export function GalleryPhotoPolaroidCard({
             bgcolor: 'rgba(0, 0, 0, 0.55)',
             color: 'common.white',
             lineHeight: 1.35,
+            pointerEvents: 'none',
+            '& a, & button': { pointerEvents: 'auto' },
           }}
         >
           <Box sx={{ flex: 1, minWidth: 0, lineHeight: 1.35 }}>
