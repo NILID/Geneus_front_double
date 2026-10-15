@@ -27,6 +27,7 @@ import { fetchPersonFacts, type PersonFact } from '../api/personFactsApi';
 import { useAuth } from '../auth/AuthContext';
 import { canEditGenealogy } from '../auth/roles';
 import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
+import { useGalleryPhotoGridCols } from '../gallery/galleryPhotoGrid';
 import { AddPersonFactForm, PersonFactsPeekList } from '../components/PersonFactsWidgets';
 import { PersonProfileShell } from '../components/PersonProfileShell';
 import { SessionLoading } from '../components/SessionLoading';
@@ -127,6 +128,7 @@ function PersonDetailRow({ label, value }: { label: string; value: React.ReactNo
 export function PersonPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const galleryCols = useGalleryPhotoGridCols();
   const canEdit = canEditGenealogy(user?.role);
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -371,8 +373,9 @@ export function PersonPage() {
             </Typography>
             <GalleryPhotoMasonry
               photos={person.tagged_gallery_photos}
-              cols={3}
-              gap={10}
+              cols={galleryCols}
+              gap={12}
+              cardTaggedPeopleDisplay="count"
               sx={{ width: '100%' }}
               menuIdPrefix={`person-${person.id}-gallery-photo`}
               currentUserId={user?.id}

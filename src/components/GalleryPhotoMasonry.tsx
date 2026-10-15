@@ -2,22 +2,68 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
-import ImageList from '@mui/material/ImageList';
-import ImageListItem from '@mui/material/ImageListItem';
-import ImageListItemBar from '@mui/material/ImageListItemBar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import SvgIcon, { type SvgIconProps } from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
 import CommentIcon from '@mui/icons-material/Comment';
+import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import type { SxProps, Theme } from '@mui/material/styles';
 
-import { resolveRailsBlobUrl } from '../api/assetUrls';
 import type { GalleryMasonryItem } from '../api/galleryPhotoApi';
+import { galleryPhotoGridSx } from '../gallery/galleryPhotoGrid';
+import { GalleryPhotoPolaroidCard } from './GalleryPhotoPolaroidCard';
 import { GalleryPhotoTaggedPeopleLinks } from './GalleryPhotoTaggedPeople';
 import { GalleryPhotoViewerModal } from './GalleryPhotoViewerModal';
 
 export type { GalleryMasonryItem } from '../api/galleryPhotoApi';
+
+const cardMetaIconSx = { width: 14, height: 14 };
+
+function GalleryPhotoCardCountsRow({
+  taggedCount,
+  commentCount,
+  showTaggedCount,
+}: {
+  taggedCount: number;
+  commentCount: number;
+  showTaggedCount: boolean;
+}) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 1.25,
+      }}
+    >
+      {showTaggedCount ? (
+        <Box
+          component="span"
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+          aria-label={`Отмечено персон: ${taggedCount}`}
+        >
+          <PersonOutlinedIcon sx={cardMetaIconSx} />
+          <Typography component="span" variant="caption" sx={{ lineHeight: 1.2 }}>
+            {taggedCount}
+          </Typography>
+        </Box>
+      ) : null}
+      <Box
+        component="span"
+        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+        aria-label={`Комментариев: ${commentCount}`}
+      >
+        <CommentIcon sx={cardMetaIconSx} />
+        <Typography component="span" variant="caption" sx={{ lineHeight: 1.2 }}>
+          {commentCount}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
 
 function GearIcon(props: SvgIconProps) {
   return (
@@ -44,13 +90,16 @@ function OwnerPhotoMenu({
   return (
     <>
       <IconButton
-        sx={{ color: 'common.white' }}
         aria-label="Действия с фото"
         aria-controls={open ? menuInstanceId : undefined}
         aria-haspopup="true"
         aria-expanded={open ? 'true' : undefined}
-        onClick={(e) => setAnchorEl(e.currentTarget)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setAnchorEl(e.currentTarget);
+        }}
         size="small"
+        sx={{ color: 'common.white' }}
       >
         <GearIcon fontSize="small" />
       </IconButton>
@@ -121,6 +170,8 @@ export interface GalleryPhotoMasonryProps {
   /** Контролируемое открытие снимка (например /media/:id) */
   openPhotoId?: number | null;
   onOpenPhotoIdChange?: (photoId: number | null) => void;
+  /** На карточке: список имён или только счётчик отметок рядом с комментариями */
+  cardTaggedPeopleDisplay?: 'links' | 'count';
   sx?: SxProps<Theme>;
 }
 
@@ -141,6 +192,7 @@ export function GalleryPhotoMasonry({
   viewerPhotos,
   openPhotoId = null,
   onOpenPhotoIdChange,
+  cardTaggedPeopleDisplay = 'links',
   sx,
 }: GalleryPhotoMasonryProps) {
   const reactId = useId();
@@ -208,79 +260,49 @@ export function GalleryPhotoMasonry({
       />
       {title}
       {photos.length > 0 ? (
-      <ImageList variant="masonry" cols={cols} gap={gap} sx={{ width: '100%', mb: 0 }}>
-        {photos.map((item, photoIndex) => {
-          const tagged = item.tagged_people ?? [];
-          const commentCount = item.comments_count ?? 0;
-          const subtitleNode = (
-            <Box component="span" sx={{ display: 'block' }}>
-              {tagged.length > 0 ? <GalleryPhotoTaggedPeopleLinks tagged={tagged} /> : null}
-              <Box
-                component="span"
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  mt: tagged.length > 0 ? 0.5 : 0,
-                  opacity: 0.9,
-                }}
-                aria-label={`Комментариев: ${commentCount}`}
-              >
-                <CommentIcon sx={{ width: 14, height: 14 }} />
-                <Typography component="span" variant="caption" sx={{ lineHeight: 1.2 }}>
-                  {commentCount}
-                </Typography>
-              </Box>
-            </Box>
-          );
-          const isOwner = canManage && item.user_id === currentUserId;
-          const year = item.taken_year != null && !Number.isNaN(item.taken_year) ? item.taken_year : null;
-          const barTitle = year != null ? String(year) : false;
-
-          return (
-            <ImageListItem key={item.id} sx={{ overflow: 'hidden', borderRadius: 1 }}>
-              {resolveRailsBlobUrl(item.image_url) ? (
-                <Box
-                  component="button"
-                  type="button"
-                  onClick={() => {
-                    if (onOpenPhotoIdChange) {
-                      onOpenPhotoIdChange(item.id);
-                    } else {
-                      setViewerIndex(photoIndex);
-                      setViewerOpen(true);
-                    }
-                  }}
-                  aria-label="Открыть фото"
-                  sx={{
-                    display: 'block',
-                    width: '100%',
-                    p: 0,
-                    m: 0,
-                    border: 0,
-                    bgcolor: 'transparent',
-                    cursor: 'pointer',
-                    lineHeight: 0,
-                    color: 'inherit',
-                    font: 'inherit',
-                    textAlign: 'left',
-                  }}
-                >
-                  <img
-                    src={resolveRailsBlobUrl(item.image_url)}
-                    alt={year != null ? `Фото, ${year}` : 'Фото'}
-                    loading="lazy"
-                    style={{ width: '100%', height: 'auto', display: 'block', verticalAlign: 'bottom' }}
-                  />
-                </Box>
+        <Box sx={galleryPhotoGridSx(cols, gap)}>
+          {photos.map((item, photoIndex) => {
+            const tagged = item.tagged_people ?? [];
+            const commentCount = item.comments_count ?? 0;
+            const footerNode =
+              cardTaggedPeopleDisplay === 'count' ? (
+                <GalleryPhotoCardCountsRow
+                  taggedCount={tagged.length}
+                  commentCount={commentCount}
+                  showTaggedCount
+                />
               ) : (
-                <Box sx={{ minHeight: 120, bgcolor: 'action.hover' }} />
-              )}
-              <ImageListItemBar
-                title={barTitle}
-                subtitle={subtitleNode}
-                position="bottom"
-                actionIcon={
+                <>
+                  {tagged.length > 0 ? <GalleryPhotoTaggedPeopleLinks tagged={tagged} /> : null}
+                  <Box sx={{ mt: tagged.length > 0 ? 0.5 : 0 }}>
+                    <GalleryPhotoCardCountsRow
+                      taggedCount={tagged.length}
+                      commentCount={commentCount}
+                      showTaggedCount={false}
+                    />
+                  </Box>
+                </>
+              );
+            const isOwner = canManage && item.user_id === currentUserId;
+            const year = item.taken_year != null && !Number.isNaN(item.taken_year) ? item.taken_year : null;
+            const caption = year != null ? String(year) : undefined;
+
+            return (
+              <GalleryPhotoPolaroidCard
+                key={item.id}
+                imageUrl={item.image_url}
+                alt={year != null ? `Фото, ${year}` : 'Фото'}
+                caption={caption}
+                footer={footerNode}
+                onClick={() => {
+                  if (onOpenPhotoIdChange) {
+                    onOpenPhotoIdChange(item.id);
+                  } else {
+                    setViewerIndex(photoIndex);
+                    setViewerOpen(true);
+                  }
+                }}
+                action={
                   isOwner ? (
                     <OwnerPhotoMenu
                       menuInstanceId={`${menuIdPrefix}-menu-${reactId}-${item.id}`}
@@ -290,12 +312,10 @@ export function GalleryPhotoMasonry({
                     />
                   ) : undefined
                 }
-                actionPosition="right"
               />
-            </ImageListItem>
-          );
-        })}
-      </ImageList>
+            );
+          })}
+        </Box>
       ) : null}
       {onLoadMore && hasMore ? (
         <Box

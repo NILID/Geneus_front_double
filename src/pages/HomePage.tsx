@@ -6,7 +6,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActionArea from '@mui/material/CardActionArea';
-import CardMedia from '@mui/material/CardMedia';
 import Container from '@mui/material/Container';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -32,12 +31,13 @@ import {
   type PersonHomeRow,
 } from '../api/personApi';
 import { fetchHomeStats, type HomeStats } from '../api/homeApi';
-import { GalleryPhotoViewerModal } from '../components/GalleryPhotoViewerModal';
+import { GalleryPhotoMasonry } from '../components/GalleryPhotoMasonry';
+import { useHomeGalleryPhotoGridCols } from '../gallery/galleryPhotoGrid';
 import { HomeBirthdaysBlock } from '../components/HomeBirthdaysBlock';
 import { HomeStatsCard } from '../components/HomeStatsCard';
 
 const HOME_PEOPLE_LIMIT = 6;
-const HOME_PHOTO_LIMIT = 8;
+const HOME_PHOTO_LIMIT = 10;
 
 const INVITE_TAB_EMAIL = 0;
 const INVITE_TAB_LINK = 1;
@@ -102,8 +102,7 @@ export function HomePage() {
     invitation_expires_at?: string;
   } | null>(null);
 
-  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
-  const [photoViewerIndex, setPhotoViewerIndex] = useState(0);
+  const galleryCols = useHomeGalleryPhotoGridCols();
 
   const load = useCallback(async () => {
     setError(null);
@@ -535,48 +534,18 @@ export function HomePage() {
                   Фотографий пока нет — загрузите первую в разделе «Медиа».
                 </Typography>
               ) : (
-                <>
-                  <GalleryPhotoViewerModal
-                    open={photoViewerOpen}
-                    onClose={() => setPhotoViewerOpen(false)}
-                    photos={photos}
-                    index={photoViewerIndex}
-                    onIndexChange={setPhotoViewerIndex}
-                    currentUserId={user?.id}
-                    onCommentsCountChange={(photoId, commentsCount) => {
-                      setPhotos((prev) =>
-                        prev.map((p) => (p.id === photoId ? { ...p, comments_count: commentsCount } : p)),
-                      );
-                    }}
-                  />
-                  <Grid container spacing={1.5}>
-                    {photos.map((ph, photoIndex) => (
-                      <Grid key={ph.id} size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card variant="outlined" sx={{ overflow: 'hidden' }}>
-                          <CardActionArea
-                            onClick={() => {
-                              setPhotoViewerIndex(photoIndex);
-                              setPhotoViewerOpen(true);
-                            }}
-                            aria-label="Открыть фото"
-                          >
-                            {resolveRailsBlobUrl(ph.image_url) ? (
-                              <CardMedia
-                                component="img"
-                                height="140"
-                                image={resolveRailsBlobUrl(ph.image_url)}
-                                alt="Фото"
-                                sx={{ objectFit: 'cover', display: 'block' }}
-                              />
-                            ) : (
-                              <Box sx={{ height: 140, bgcolor: 'action.hover' }} />
-                            )}
-                          </CardActionArea>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </>
+                <GalleryPhotoMasonry
+                  photos={photos}
+                  cols={galleryCols}
+                  gap={12}
+                  currentUserId={user?.id}
+                  menuIdPrefix="home-gallery-photo"
+                  onGalleryPhotoCommentsCountChange={(photoId, commentsCount) => {
+                    setPhotos((prev) =>
+                      prev.map((p) => (p.id === photoId ? { ...p, comments_count: commentsCount } : p)),
+                    );
+                  }}
+                />
               )}
             </Box>
           </Stack>

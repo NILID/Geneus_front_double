@@ -14,9 +14,8 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useGalleryPhotoGridCols } from '../gallery/galleryPhotoGrid';
 import {
   deleteGalleryPhoto,
   fetchGalleryPhoto,
@@ -69,10 +68,7 @@ export function MediaPage() {
   const openPhotoId = parseMediaPhotoId(photoIdParam);
   const invalidPhotoParam = Boolean(photoIdParam) && openPhotoId == null;
   const canEdit = canEditGenealogy(user?.role);
-  const theme = useTheme();
-  const isMdUp = useMediaQuery(theme.breakpoints.up('md'));
-  const isSmUp = useMediaQuery(theme.breakpoints.up('sm'));
-  const galleryCols = isMdUp ? 3 : isSmUp ? 2 : 1;
+  const galleryCols = useGalleryPhotoGridCols();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
